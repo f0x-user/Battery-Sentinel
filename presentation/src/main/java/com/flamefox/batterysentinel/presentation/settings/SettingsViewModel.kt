@@ -3,6 +3,7 @@ package com.flamefox.batterysentinel.presentation.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flamefox.batterysentinel.domain.model.AppSettings
+import com.flamefox.batterysentinel.domain.model.SystemBackup
 import com.flamefox.batterysentinel.domain.repository.AppUsageRepository
 import com.flamefox.batterysentinel.domain.repository.SystemSettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,8 +20,12 @@ data class SettingsUiState(
     val hasUsageStatsPermission: Boolean = false,
     val hasWriteSettingsPermission: Boolean = false,
     val hasBatteryStatsPermission: Boolean = false,
-    val hasWriteSecureSettingsPermission: Boolean = false
+    val hasWriteSecureSettingsPermission: Boolean = false,
+    val systemBackup: SystemBackup? = null,
+    val restoreResult: RestoreResult? = null
 )
+
+enum class RestoreResult { SUCCESS, PARTIAL, NO_BACKUP }
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -35,6 +40,12 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.getAppSettings()
             .onEach { settings ->
                 _uiState.value = _uiState.value.copy(appSettings = settings)
+            }
+            .launchIn(viewModelScope)
+
+        settingsRepository.getSystemBackup()
+            .onEach { backup ->
+                _uiState.value = _uiState.value.copy(systemBackup = backup)
             }
             .launchIn(viewModelScope)
 
@@ -69,5 +80,23 @@ class SettingsViewModel @Inject constructor(
             val updated = _uiState.value.appSettings.copy(notificationsEnabled = enabled)
             settingsRepository.updateAppSettings(updated)
         }
+    }
+
+    fun restoreSystemBackup() {
+        viewModelScope.launch {
+            val backup = _uiState.value.systemBackup
+            if (backup == null) {
+                _uiState.value = _uiState.value.copy(restoreResult = RestoreResult.NO_BACKUP)
+                return@launch
+            }
+            val allOk = settingsRepository.restoreSystemBackup()
+            _uiState.value = _uiState.value.copy(
+                restoreResult = if (allOk) RestoreResult.SUCCESS else RestoreResult.PARTIAL
+            )
+        }
+    }
+
+    fun clearRestoreResult() {
+        _uiState.value = _uiState.value.copy(restoreResult = null)
     }
 }

@@ -19,7 +19,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,12 +33,19 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flamefox.batterysentinel.core.common.Constants
+import com.flamefox.batterysentinel.presentation.settings.RestoreResult
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
@@ -161,6 +170,115 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Button(onClick = { viewModel.refreshPermissions() }, modifier = Modifier.fillMaxWidth()) {
             Text("Refresh Permission Status")
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // System-Backup / Wiederherstellen
+        SystemBackupCard(
+            backup = state.systemBackup,
+            onRestore = { viewModel.restoreSystemBackup() }
+        )
+
+        // Ergebnis-Dialog nach Wiederherstellung
+        state.restoreResult?.let { result ->
+            AlertDialog(
+                onDismissRequest = { viewModel.clearRestoreResult() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.clearRestoreResult() }) { Text("OK") }
+                },
+                title = { Text("Wiederherstellung") },
+                text = {
+                    Text(
+                        when (result) {
+                            RestoreResult.SUCCESS -> "Alle Einstellungen wurden erfolgreich wiederhergestellt."
+                            RestoreResult.PARTIAL -> "Einstellungen wurden teilweise wiederhergestellt. Einige Berechtigungen fehlen möglicherweise."
+                            RestoreResult.NO_BACKUP -> "Kein Backup vorhanden. Starte die App neu, um ein Backup zu erstellen."
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SystemBackupCard(
+    backup: com.flamefox.batterysentinel.domain.model.SystemBackup?,
+    onRestore: () -> Unit
+) {
+    var showConfirm by remember { mutableStateOf(false) }
+    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("System-Backup", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (backup != null) {
+                Text(
+                    "Gespeichert am: ${dateFormat.format(Date(backup.savedAt))}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Helligkeit: ${backup.brightness}  |  " +
+                    "Adaptive: ${if (backup.isAdaptiveBrightness) "An" else "Aus"}  |  " +
+                    "Timeout: ${backup.screenTimeoutMs / 1000}s",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "Energiesparmodus: ${if (backup.isBatterySaverEnabled) "An" else "Aus"}  |  " +
+                    "Sync: ${if (backup.isSyncEnabled) "An" else "Aus"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { showConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Backup wiederherstellen")
+                }
+            } else {
+                Text(
+                    "Noch kein Backup vorhanden. Das Backup wird beim nächsten App-Start automatisch angelegt.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("Backup wiederherstellen?") },
+            text = {
+                Text(
+                    "Alle System-Einstellungen (Helligkeit, Screen-Timeout, Energiesparmodus, " +
+                    "Synchronisierung, Doze) werden auf den Zustand beim letzten App-Start zurückgesetzt."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirm = false
+                        onRestore()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text("Wiederherstellen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text("Abbrechen") }
+            }
+        )
     }
 }
 

@@ -1,6 +1,7 @@
 package com.flamefox.batterysentinel.domain.repository
 
 import com.flamefox.batterysentinel.domain.model.AppSettings
+import com.flamefox.batterysentinel.domain.model.SystemBackup
 import kotlinx.coroutines.flow.Flow
 
 interface SystemSettingsRepository {
@@ -20,4 +21,9 @@ interface SystemSettingsRepository {
     suspend fun setDozeConstants(constants: String): Boolean
     fun hasWriteSettingsPermission(): Boolean
     fun hasWriteSecureSettingsPermission(): Boolean
+
+    // Backup / Restore
+    suspend fun saveSystemBackup()
+    suspend fun restoreSystemBackup(): Boolean
+    fun getSystemBackup(): Flow<SystemBackup?>
 }

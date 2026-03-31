@@ -22,3 +22,17 @@ data class AppSettings(
     val notificationsEnabled: Boolean = true,
     val onboardingCompleted: Boolean = false
 )
+
+/**
+ * Schnappschuss aller vom App veränderbaren System-Einstellungen.
+ * Wird beim App-Start einmalig gespeichert und kann per Button wiederhergestellt werden.
+ */
+data class SystemBackup(
+    val brightness: Int = 127,
+    val isAdaptiveBrightness: Boolean = false,
+    val screenTimeoutMs: Int = 30000,
+    val isBatterySaverEnabled: Boolean = false,
+    val isSyncEnabled: Boolean = true,
+    val dozeConstants: String = "default",
+    val savedAt: Long = 0L
+)

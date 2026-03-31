@@ -29,6 +29,9 @@ class MainActivity : ComponentActivity() {
         startForegroundService(Intent(this, BatteryMonitorService::class.java))
 
         lifecycleScope.launch {
+            // Beim ersten Start des jeweiligen App-Starts den IST-Zustand sichern
+            settingsRepository.saveSystemBackup()
+
             val settings = settingsRepository.getAppSettings().first()
             val startDestination = if (settings.onboardingCompleted) {
                 Screen.Dashboard.route
