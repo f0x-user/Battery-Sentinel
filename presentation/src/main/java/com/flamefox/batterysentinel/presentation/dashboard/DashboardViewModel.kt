@@ -6,6 +6,7 @@ import com.flamefox.batterysentinel.domain.model.BatteryState
 import com.flamefox.batterysentinel.domain.model.ChargeStatus
 import com.flamefox.batterysentinel.domain.model.DrainRate
 import com.flamefox.batterysentinel.domain.model.PluggedType
+import com.flamefox.batterysentinel.domain.repository.ChargingSessionRepository
 import com.flamefox.batterysentinel.domain.usecase.GetBatteryStateUseCase
 import com.flamefox.batterysentinel.domain.usecase.GetDrainRateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,6 +21,7 @@ import javax.inject.Inject
 data class DashboardUiState(
     val batteryState: BatteryState = BatteryState(0, 0, 0, 0f, false, ChargeStatus.UNKNOWN, PluggedType.NONE, 0),
     val drainRate: DrainRate = DrainRate(0f, 0f, 0f),
+    val trackedSessionCount: Int = 0,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -27,7 +29,8 @@ data class DashboardUiState(
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val getBatteryStateUseCase: GetBatteryStateUseCase,
-    private val getDrainRateUseCase: GetDrainRateUseCase
+    private val getDrainRateUseCase: GetDrainRateUseCase,
+    private val chargingSessionRepository: ChargingSessionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -36,6 +39,7 @@ class DashboardViewModel @Inject constructor(
     init {
         observeBattery()
         observeDrainRate()
+        observeSessionCount()
     }
 
     private fun observeBattery() {
@@ -54,7 +58,18 @@ class DashboardViewModel @Inject constructor(
             .onEach { rate ->
                 _uiState.value = _uiState.value.copy(drainRate = rate)
             }
-            .catch { /* ignore drain rate errors */ }
+            .catch { }
+            .launchIn(viewModelScope)
+    }
+
+    private fun observeSessionCount() {
+        chargingSessionRepository.getAllSessions()
+            .onEach { sessions ->
+                _uiState.value = _uiState.value.copy(
+                    trackedSessionCount = sessions.count { it.isComplete }
+                )
+            }
+            .catch { }
             .launchIn(viewModelScope)
     }
 }

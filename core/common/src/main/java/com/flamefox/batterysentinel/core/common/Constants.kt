@@ -5,6 +5,7 @@ object Constants {
     const val BATTERY_POLL_INTERVAL_MS = 1000L
     const val ANOMALY_CHECK_INTERVAL_MINUTES = 15L
     const val SEVEN_DAY_MS = 7L * 24 * 60 * 60 * 1000
+    const val NINETY_DAY_MS = 90L * 24 * 60 * 60 * 1000
     const val TEMPERATURE_ALARM_CELSIUS = 40f
     const val DEFAULT_CHARGE_ALARM_THRESHOLD = 80
 

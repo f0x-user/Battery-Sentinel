@@ -72,8 +72,10 @@ class BatteryMonitorService : Service() {
             .launchIn(serviceScope)
 
         serviceScope.launch(Dispatchers.IO) {
-            val cutoff = System.currentTimeMillis() - (Constants.SEVEN_DAY_MS * 2)
-            batterySampleDao.deleteOlderThan(cutoff)
+            // Batterie-Samples: 14 Tage aufbewahren
+            batterySampleDao.deleteOlderThan(System.currentTimeMillis() - Constants.SEVEN_DAY_MS * 2)
+            // Ladesitzungen: 90 Tage aufbewahren (DSGVO-Aufbewahrungsfrist)
+            chargingSessionDao.deleteOlderThan(System.currentTimeMillis() - Constants.NINETY_DAY_MS)
         }
     }
 

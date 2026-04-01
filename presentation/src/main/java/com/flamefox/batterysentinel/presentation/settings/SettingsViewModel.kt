@@ -24,7 +24,8 @@ data class SettingsUiState(
     val systemBackup: SystemBackup? = null,
     val allBackups: List<SystemBackup> = emptyList(),
     val restoreResult: RestoreResult? = null,
-    val showAbout: Boolean = false
+    val showAbout: Boolean = false,
+    val dataClearSuccess: Boolean = false
 )
 
 enum class RestoreResult { SUCCESS, PARTIAL, NO_BACKUP }
@@ -114,5 +115,16 @@ class SettingsViewModel @Inject constructor(
 
     fun hideAbout() {
         _uiState.value = _uiState.value.copy(showAbout = false)
+    }
+
+    fun clearAllData() {
+        viewModelScope.launch {
+            settingsRepository.clearAllUserData()
+            _uiState.value = _uiState.value.copy(dataClearSuccess = true)
+        }
+    }
+
+    fun dismissDataClearSuccess() {
+        _uiState.value = _uiState.value.copy(dataClearSuccess = false)
     }
 }

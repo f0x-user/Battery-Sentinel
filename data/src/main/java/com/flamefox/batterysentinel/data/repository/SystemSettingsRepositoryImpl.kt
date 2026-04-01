@@ -1,5 +1,7 @@
 package com.flamefox.batterysentinel.data.repository
 
+import com.flamefox.batterysentinel.core.database.dao.BatterySampleDao
+import com.flamefox.batterysentinel.core.database.dao.ChargingSessionDao
 import com.flamefox.batterysentinel.data.datastore.AppSettingsDataStore
 import com.flamefox.batterysentinel.data.datastore.SystemBackupDataStore
 import com.flamefox.batterysentinel.data.source.SystemSettingsDataSource
@@ -15,7 +17,9 @@ import javax.inject.Singleton
 class SystemSettingsRepositoryImpl @Inject constructor(
     private val dataSource: SystemSettingsDataSource,
     private val dataStore: AppSettingsDataStore,
-    private val backupStore: SystemBackupDataStore
+    private val backupStore: SystemBackupDataStore,
+    private val batterySampleDao: BatterySampleDao,
+    private val chargingSessionDao: ChargingSessionDao
 ) : SystemSettingsRepository {
 
     override fun getAppSettings(): Flow<AppSettings> = dataStore.settings
@@ -68,4 +72,14 @@ class SystemSettingsRepositoryImpl @Inject constructor(
     override fun getSystemBackup(): Flow<SystemBackup?> = backupStore.backup
 
     override fun getAllSystemBackups(): Flow<List<SystemBackup>> = backupStore.allBackups
+
+    override suspend fun clearAllUserData() {
+        batterySampleDao.deleteAll()
+        chargingSessionDao.deleteAll()
+        backupStore.clearAll()
+        // App-Einstellungen auf Standard zurücksetzen, Onboarding-Flag erhalten
+        val current = dataStore.settings.first()
+        dataStore.clearAll()
+        dataStore.updateSettings(current.copy(onboardingCompleted = true))
+    }
 }

@@ -37,4 +37,7 @@ interface ChargingSessionDao {
 
     @Query("DELETE FROM charging_sessions WHERE startTime < :cutoff")
     suspend fun deleteOlderThan(cutoff: Long)
+
+    @Query("DELETE FROM charging_sessions")
+    suspend fun deleteAll()
 }

@@ -27,4 +27,7 @@ interface BatterySampleDao {
 
     @Query("SELECT COUNT(*) FROM battery_samples")
     suspend fun count(): Int
+
+    @Query("DELETE FROM battery_samples")
+    suspend fun deleteAll()
 }

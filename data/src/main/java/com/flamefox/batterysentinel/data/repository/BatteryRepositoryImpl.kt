@@ -7,6 +7,7 @@ import com.flamefox.batterysentinel.data.source.BatteryManagerDataSource
 import com.flamefox.batterysentinel.domain.model.BatteryState
 import com.flamefox.batterysentinel.domain.model.DrainRate
 import com.flamefox.batterysentinel.domain.repository.BatteryRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flow
@@ -26,8 +27,15 @@ class BatteryRepositoryImpl @Inject constructor(
         BatteryMonitorService.batteryState.value
 
     override fun getDrainRate(): Flow<DrainRate> = flow {
+        while (true) {
+            emit(computeDrainRate())
+            delay(60_000L)
+        }
+    }
+
+    private suspend fun computeDrainRate(): DrainRate {
         val now = System.currentTimeMillis()
-        val cutoff1h = now - 3600_000L
+        val cutoff1h = now - 3_600_000L
         val screenOnSamples = batterySampleDao.getScreenOnSamplesSince(cutoff1h)
         val screenOffSamples = batterySampleDao.getScreenOffSamplesSince(cutoff1h)
 
@@ -35,7 +43,7 @@ class BatteryRepositoryImpl @Inject constructor(
             if (samples.size < 2) return 0f
             val sorted = samples.sortedBy { it.second }
             val durationH = (sorted.last().second - sorted.first().second) / 3_600_000f
-            if (durationH < 0.01f) return 0f
+            if (durationH < 0.05f) return 0f
             val drop = (sorted.first().first - sorted.last().first).toFloat()
             return if (drop > 0) drop / durationH else 0f
         }
@@ -45,7 +53,7 @@ class BatteryRepositoryImpl @Inject constructor(
         val allSamples = (screenOnSamples + screenOffSamples).sortedBy { it.timestamp }
         val overallRate = calcRate(allSamples.map { it.percentage to it.timestamp })
 
-        emit(DrainRate(overallRate, onRate, offRate))
+        return DrainRate(overallRate, onRate, offRate)
     }
 
     override fun getSevenDayAverageDrainRate(): Float {

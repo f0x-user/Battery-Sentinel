@@ -27,4 +27,7 @@ interface SystemSettingsRepository {
     suspend fun restoreSystemBackup(): Boolean
     fun getSystemBackup(): Flow<SystemBackup?>
     fun getAllSystemBackups(): Flow<List<SystemBackup>>
+
+    // DSGVO: Alle Nutzerdaten löschen
+    suspend fun clearAllUserData()
 }

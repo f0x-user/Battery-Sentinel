@@ -1,0 +1,101 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+  release:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK (unsigned)
+        run: ./gradlew assembleRelease
+
+      - name: Get version name
+        id: version
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: BatterySentinel v${{ steps.version.outputs.version }}
+          body: |
+            ## BatterySentinel v${{ steps.version.outputs.version }}
+
+            ### Änderungen in v1.1.0
+            - Swipe-Navigation zwischen Dashboard, Charging, Apps, Optimize, Settings
+            - Ladezyklen korrekt aus Hardware/Sysfs auslesen
+            - Charging-Tab: Neugestaltung mit aktivem Ladestatus, Leistungsanzeige & ETA
+            - Apps: Alle Einträge anklickbar (öffnet Android App-Einstellungen)
+            - Apps: Neue "Pro Zyklus"-Ansicht für sitzungsbezogene Nutzungszeit
+            - Settings: 5 rotierende System-Backups (ältestes wird überschrieben)
+            - Settings: About-Seite mit Changelog und Datenschutzerklärung
+            - Benachrichtigungen öffnen die App beim Antippen
+            - Optimize: Überarbeitete Benutzeroberfläche mit Akku-Pflegetipps
+            - DSGVO: Datenlöschfunktion, Datenschutzerklärung, 90-Tage-Retention
+            - Fix: HiltTestRunner-Dependency hinzugefügt
+            - Fix: Drain-Rate aktualisiert sich jede Minute
+
+            ### Installationshinweis
+            Da die APK nicht signiert ist, muss sie manuell signiert oder "Unbekannte Quellen" aktiviert werden.
+          files: app/build/outputs/apk/release/*.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

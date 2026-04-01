@@ -214,19 +214,152 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // DSGVO: Datenlöschung
+        DsgvoCard(
+            onClearData = { viewModel.clearAllData() }
+        )
+
         // About-Dialog
         if (state.showAbout) {
             AboutDialog(onDismiss = { viewModel.hideAbout() })
+        }
+
+        // Datenlöschung Bestätigung
+        if (state.dataClearSuccess) {
+            AlertDialog(
+                onDismissRequest = { viewModel.dismissDataClearSuccess() },
+                confirmButton = {
+                    TextButton(onClick = { viewModel.dismissDataClearSuccess() }) { Text("OK") }
+                },
+                title = { Text("Daten gelöscht") },
+                text = { Text("Alle lokal gespeicherten Batterie-Daten wurden erfolgreich gelöscht.") }
+            )
         }
     }
 }
 
 @Composable
+private fun DsgvoCard(onClearData: () -> Unit) {
+    var showConfirm by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Datenschutz (DSGVO)", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "BatterySentinel speichert ausschließlich lokale Gerätedaten (Akkuwerte, Ladesitzungen, " +
+                "Systemeinstellungen). Es werden keine Daten ins Internet übertragen und keine " +
+                "Drittanbieter-Dienste verwendet.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Aufbewahrungsfristen: Akkuproben 14 Tage · Ladesitzungen 90 Tage",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Button(
+                onClick = { showConfirm = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Alle Daten löschen (Art. 17 DSGVO)")
+            }
+        }
+    }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text("Alle Daten löschen?") },
+            text = {
+                Text(
+                    "Hiermit werden alle lokal gespeicherten Akkuproben, Ladesitzungen und " +
+                    "Sicherungsdaten unwiderruflich gelöscht. Die App-Einstellungen werden zurückgesetzt."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showConfirm = false; onClearData() },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Löschen") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text("Abbrechen") }
+            }
+        )
+    }
+}
+
+@Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
+    var showPrivacy by remember { mutableStateOf(false) }
+
+    if (showPrivacy) {
+        AlertDialog(
+            onDismissRequest = { showPrivacy = false },
+            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text("Schließen") } },
+            title = { Text("Datenschutzerklärung") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Stand: 01.04.2025", style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("1. Verantwortlicher", style = MaterialTheme.typography.labelMedium)
+                    Text("FlameFox · com.flamefox.batterysentinel", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("2. Erhobene Daten", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "Die App erhebt ausschließlich technische Gerätedaten des eigenen Smartphones: " +
+                        "Akkustand, Strom, Spannung, Temperatur, Ladesitzungen und App-Nutzungszeiten. " +
+                        "Es werden keine personenbezogenen Daten wie Name, E-Mail oder Standort erfasst.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("3. Speicherung & Übertragung", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "Alle Daten werden ausschließlich lokal auf dem Gerät gespeichert. Es findet " +
+                        "keine Übertragung an externe Server, Drittanbieter oder andere Dienste statt.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("4. Aufbewahrungsfristen", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "Akkuproben: 14 Tage · Ladesitzungen: 90 Tage · " +
+                        "Systemeinstellungs-Backups: bis zur manuellen Löschung (max. 5 Einträge)",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("5. Betroffenenrechte (DSGVO Art. 15–22)", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "Da alle Daten lokal gespeichert sind, können Sie jederzeit über " +
+                        "Einstellungen → Alle Daten löschen alle erfassten Daten unwiderruflich löschen (Art. 17).",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text("6. Rechtsgrundlage", style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        "Die Datenverarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. a DSGVO " +
+                        "(Einwilligung durch Nutzung der App).",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        )
+        return
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Schließen") }
+        },
+        dismissButton = {
+            TextButton(onClick = { showPrivacy = true }) { Text("Datenschutz") }
         },
         title = { Text("Über BatterySentinel") },
         text = {
@@ -237,13 +370,14 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(6.dp))
                 ChangelogEntry("1.1.0", listOf(
                     "Swipe-Navigation zwischen Tabs",
-                    "Ladezyklen korrekt anzeigen (statt mAh)",
-                    "Charging-Tab: Neugestaltung mit aktivem Ladestatus, ETA und Statistiken",
+                    "Ladezyklen korrekt anzeigen",
+                    "Charging: Neugestaltung mit aktivem Ladestatus, ETA und Statistiken",
                     "Apps: Alle Einträge anklickbar (öffnet App-Einstellungen)",
-                    "Apps: Neue Ansicht 'Pro Zyklus' für sessionbezogene Nutzung",
+                    "Apps: Neue Ansicht 'Pro Zyklus'",
                     "Settings: 5 rotierende System-Backups",
-                    "Benachrichtigungen öffnen nun die App beim Antippen",
-                    "Optimize: Überarbeitete Batterie-Tipps"
+                    "Benachrichtigungen öffnen die App beim Antippen",
+                    "Optimize: Überarbeitete Batterie-Tipps",
+                    "DSGVO: Datenlöschung + Datenschutzerklärung + 90-Tage-Retention"
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.0.0", listOf(

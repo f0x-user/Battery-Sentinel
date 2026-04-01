@@ -216,10 +216,7 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
         else -> "Schlecht"
     }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -227,7 +224,11 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Akkugesundheit", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Akkugesundheit",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Text(
                         "$sessionCount abgeschlossene Ladesitzungen",
                         style = MaterialTheme.typography.labelSmall,
@@ -240,15 +241,26 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
                         style = MaterialTheme.typography.headlineMedium,
                         color = color
                     )
-                    Text(statusText, style = MaterialTheme.typography.labelMedium, color = color)
+                    androidx.compose.material3.Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = color.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            statusText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = color,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
             if (healthPercent != null) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 LinearProgressIndicator(
                     progress = { (healthPercent / 100f).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth(),
-                    color = color
+                    color = color,
+                    trackColor = color.copy(alpha = 0.2f)
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

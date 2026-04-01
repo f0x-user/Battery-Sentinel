@@ -42,19 +42,28 @@ class BatteryManagerDataSource @Inject constructor(
     }
 
     private fun readCycleCount(): Int {
+        // 1. BatteryManager.BATTERY_PROPERTY_CYCLE_COUNT (int = 9, public since API 34)
+        try {
+            val value = batteryManager.getIntProperty(9)
+            if (value > 0) return value
+        } catch (_: Exception) { }
+
+        // 2. Sysfs – geräteabhängig
         val paths = listOf(
             "/sys/class/power_supply/battery/cycle_count",
-            "/sys/class/power_supply/Battery/cycle_count"
+            "/sys/class/power_supply/Battery/cycle_count",
+            "/sys/class/power_supply/bms/cycle_count"
         )
         for (path in paths) {
             try {
                 val file = java.io.File(path)
                 if (file.exists() && file.canRead()) {
-                    return file.readText().trim().toIntOrNull() ?: 0
+                    val v = file.readText().trim().toIntOrNull() ?: 0
+                    if (v > 0) return v
                 }
             } catch (_: Exception) { }
         }
-        return 0
+        return -1  // -1 = nicht verfügbar
     }
 
     fun readCurrentState(): BatteryState {

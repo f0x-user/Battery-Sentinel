@@ -39,6 +39,10 @@ class AppSettingsDataStore @Inject constructor(
         )
     }
 
+    suspend fun clearAll() {
+        context.dataStore.edit { it.clear() }
+    }
+
     suspend fun updateSettings(settings: AppSettings) {
         context.dataStore.edit { prefs ->
             prefs[Keys.CHARGE_ALARM_THRESHOLD] = settings.chargeAlarmThreshold

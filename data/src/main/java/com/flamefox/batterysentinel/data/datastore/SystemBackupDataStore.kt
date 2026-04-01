@@ -83,7 +83,9 @@ class SystemBackupDataStore @Inject constructor(
         }
     }
 
-    suspend fun getLatestBackup(): SystemBackup? {
-        return backup.first()
+    suspend fun getLatestBackup(): SystemBackup? = backup.first()
+
+    suspend fun clearAll() {
+        context.systemBackupDataStore.edit { it.clear() }
     }
 }
