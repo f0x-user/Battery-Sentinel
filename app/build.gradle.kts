@@ -32,6 +32,7 @@ android {
                 storePassword = keystorePass
                 this.keyAlias = keyAlias
                 keyPassword = keyPass
+                storeType = "PKCS12"
             }
         }
     }
