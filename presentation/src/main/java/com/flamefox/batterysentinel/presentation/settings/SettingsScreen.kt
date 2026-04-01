@@ -19,10 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,10 +44,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flamefox.batterysentinel.core.common.Constants
-import com.flamefox.batterysentinel.presentation.settings.RestoreResult
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private const val APP_VERSION = "1.1.0"
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
@@ -58,34 +61,44 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
+            TextButton(onClick = { viewModel.showAbout() }) {
+                Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(16.dp))
+                Text(" Über", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
 
-        // Permission Status Dashboard
+        // Berechtigungsstatus
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Permissions", style = MaterialTheme.typography.titleMedium)
+                Text("Berechtigungen", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 PermissionRow(
-                    name = "Usage Stats",
-                    description = "Per-app foreground time",
+                    name = "Nutzungsstatistik",
+                    description = "App-Nutzungszeit im Vordergrund",
                     granted = state.hasUsageStatsPermission,
                     onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
                     grantType = "settings"
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Write Settings",
-                    description = "Brightness & screen timeout control",
+                    name = "Einstellungen schreiben",
+                    description = "Helligkeit & Screen-Timeout steuern",
                     granted = state.hasWriteSettingsPermission,
                     onGrant = { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)) },
                     grantType = "settings"
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Battery Stats",
-                    description = "Per-app battery attribution (mAh)",
+                    name = "Akkustatistik",
+                    description = "App-bezogener Akkuverbrauch (mAh)",
                     granted = state.hasBatteryStatsPermission,
                     adbCommand = Constants.ADB_GRANT_BATTERY_STATS,
                     grantType = "adb",
@@ -96,8 +109,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Write Secure Settings",
-                    description = "Battery saver & Doze control",
+                    name = "Sichere Einstellungen schreiben",
+                    description = "Energiesparmodus & Doze steuern",
                     granted = state.hasWriteSecureSettingsPermission,
                     adbCommand = Constants.ADB_GRANT_WRITE_SECURE,
                     grantType = "adb",
@@ -111,14 +124,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Threshold Configuration
+        // Schwellenwerte
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Thresholds", style = MaterialTheme.typography.titleMedium)
+                Text("Alarmschwellen", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Charge Alarm Threshold: ${state.appSettings.chargeAlarmThreshold}%",
+                    "Ladealarm: ${state.appSettings.chargeAlarmThreshold}%",
                     style = MaterialTheme.typography.labelMedium
                 )
                 Slider(
@@ -131,7 +144,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Temperature Alert: %.0f°C".format(state.appSettings.temperatureAlarmThresholdCelsius),
+                    "Temperaturalarm: %.0f°C".format(state.appSettings.temperatureAlarmThresholdCelsius),
                     style = MaterialTheme.typography.labelMedium
                 )
                 Slider(
@@ -145,7 +158,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Notification Settings
+        // Benachrichtigungen
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -153,10 +166,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Notifications")
-                    Text("Charge alarms, temp alerts, anomalies",
+                    Text("Benachrichtigungen")
+                    Text(
+                        "Ladealarme, Temperaturwarnungen, Anomalien",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Switch(
                     checked = state.appSettings.notificationsEnabled,
@@ -168,14 +183,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = { viewModel.refreshPermissions() }, modifier = Modifier.fillMaxWidth()) {
-            Text("Refresh Permission Status")
+            Text("Berechtigungsstatus aktualisieren")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // System-Backup / Wiederherstellen
+        // System-Backups
         SystemBackupCard(
-            backup = state.systemBackup,
+            backups = state.allBackups,
             onRestore = { viewModel.restoreSystemBackup() }
         )
 
@@ -198,42 +213,142 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 }
             )
         }
+
+        // About-Dialog
+        if (state.showAbout) {
+            AboutDialog(onDismiss = { viewModel.hideAbout() })
+        }
+    }
+}
+
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Schließen") }
+        },
+        title = { Text("Über BatterySentinel") },
+        text = {
+            Column {
+                Text("Version $APP_VERSION", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Änderungen in dieser Version:", style = MaterialTheme.typography.labelMedium)
+                Spacer(modifier = Modifier.height(6.dp))
+                ChangelogEntry("1.1.0", listOf(
+                    "Swipe-Navigation zwischen Tabs",
+                    "Ladezyklen korrekt anzeigen (statt mAh)",
+                    "Charging-Tab: Neugestaltung mit aktivem Ladestatus, ETA und Statistiken",
+                    "Apps: Alle Einträge anklickbar (öffnet App-Einstellungen)",
+                    "Apps: Neue Ansicht 'Pro Zyklus' für sessionbezogene Nutzung",
+                    "Settings: 5 rotierende System-Backups",
+                    "Benachrichtigungen öffnen nun die App beim Antippen",
+                    "Optimize: Überarbeitete Batterie-Tipps"
+                ))
+                Spacer(modifier = Modifier.height(8.dp))
+                ChangelogEntry("1.0.0", listOf(
+                    "Erstveröffentlichung",
+                    "Echtzeit-Akkuüberwachung",
+                    "Ladesitzungsverlauf",
+                    "App-Nutzungsstatistiken",
+                    "System-Backup & -Wiederherstellung"
+                ))
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Entwickelt von FlameFox · com.flamefox.batterysentinel",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun ChangelogEntry(version: String, entries: List<String>) {
+    Text("v$version", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    entries.forEach { entry ->
+        Text("• $entry", style = MaterialTheme.typography.bodySmall)
     }
 }
 
 @Composable
 private fun SystemBackupCard(
-    backup: com.flamefox.batterysentinel.domain.model.SystemBackup?,
+    backups: List<com.flamefox.batterysentinel.domain.model.SystemBackup>,
     onRestore: () -> Unit
 ) {
     var showConfirm by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("System-Backup", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("System-Backups", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${backups.size}/5",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Maximal 5 Backups werden gespeichert. Das älteste wird automatisch überschrieben.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (backup != null) {
+            if (backups.isEmpty()) {
                 Text(
-                    "Gespeichert am: ${dateFormat.format(Date(backup.savedAt))}",
-                    style = MaterialTheme.typography.labelSmall,
+                    "Noch kein Backup vorhanden. Das Backup wird beim nächsten App-Start automatisch angelegt.",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "Helligkeit: ${backup.brightness}  |  " +
-                    "Adaptive: ${if (backup.isAdaptiveBrightness) "An" else "Aus"}  |  " +
-                    "Timeout: ${backup.screenTimeoutMs / 1000}s",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Energiesparmodus: ${if (backup.isBatterySaverEnabled) "An" else "Aus"}  |  " +
-                    "Sync: ${if (backup.isSyncEnabled) "An" else "Aus"}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            } else {
+                backups.forEachIndexed { index, backup ->
+                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (index == 0)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Column(modifier = Modifier.padding(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    if (index == 0) "Neuestes Backup" else "Backup ${index + 1}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (index == 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    dateFormat.format(Date(backup.savedAt)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Text(
+                                "Helligkeit: ${backup.brightness}  |  " +
+                                "Adaptiv: ${if (backup.isAdaptiveBrightness) "Ein" else "Aus"}  |  " +
+                                "Timeout: ${backup.screenTimeoutMs / 1000}s  |  " +
+                                "Sparmodus: ${if (backup.isBatterySaverEnabled) "Ein" else "Aus"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = { showConfirm = true },
@@ -242,14 +357,8 @@ private fun SystemBackupCard(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Backup wiederherstellen")
+                    Text("Neuestes Backup wiederherstellen")
                 }
-            } else {
-                Text(
-                    "Noch kein Backup vorhanden. Das Backup wird beim nächsten App-Start automatisch angelegt.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
             }
         }
     }
@@ -261,7 +370,7 @@ private fun SystemBackupCard(
             text = {
                 Text(
                     "Alle System-Einstellungen (Helligkeit, Screen-Timeout, Energiesparmodus, " +
-                    "Synchronisierung, Doze) werden auf den Zustand beim letzten App-Start zurückgesetzt."
+                    "Synchronisierung, Doze) werden auf den zuletzt gespeicherten Zustand zurückgesetzt."
                 )
             },
             confirmButton = {
@@ -313,13 +422,16 @@ private fun PermissionRow(
                         else MaterialTheme.colorScheme.error
                     )
                 }
-                Text(description, style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    description,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             if (!granted) {
                 when (grantType) {
-                    "settings" -> TextButton(onClick = { onGrant?.invoke() }) { Text("Grant") }
-                    "adb" -> TextButton(onClick = { onCopy?.invoke() }) { Text("Copy ADB") }
+                    "settings" -> TextButton(onClick = { onGrant?.invoke() }) { Text("Erteilen") }
+                    "adb" -> TextButton(onClick = { onCopy?.invoke() }) { Text("ADB kopieren") }
                 }
             }
         }

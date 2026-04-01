@@ -12,6 +12,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val MAIN_ACTIVITY_CLASS = "com.flamefox.batterysentinel.MainActivity"
+
 @Singleton
 class BatteryNotificationManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -43,12 +45,28 @@ class BatteryNotificationManager @Inject constructor(
         notificationManager.createNotificationChannel(alertChannel)
     }
 
+    private fun buildMainActivityIntent(): PendingIntent {
+        val intent = try {
+            val clazz = Class.forName(MAIN_ACTIVITY_CLASS)
+            Intent(context, clazz).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+        } catch (e: ClassNotFoundException) {
+            Intent()
+        }
+        return PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
     fun buildServiceNotification(percentage: Int, isCharging: Boolean): Notification {
-        val status = if (isCharging) "Charging" else "Discharging"
+        val status = if (isCharging) "Wird geladen" else "Entlädt"
         return NotificationCompat.Builder(context, Constants.NOTIFICATION_CHANNEL_MONITOR)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("BatterySentinel Active")
+            .setContentTitle("BatterySentinel")
             .setContentText("$percentage% — $status")
+            .setContentIntent(buildMainActivityIntent())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
@@ -58,8 +76,9 @@ class BatteryNotificationManager @Inject constructor(
     fun showChargeAlarmNotification(percentage: Int, threshold: Int) {
         val notification = NotificationCompat.Builder(context, Constants.NOTIFICATION_CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("Charge Threshold Reached")
-            .setContentText("Battery at $percentage% (threshold: $threshold%) — unplug to protect battery health")
+            .setContentTitle("Ladestand erreicht")
+            .setContentText("Batterie bei $percentage% (Schwelle: $threshold%) — Ladekabel trennen für bessere Akku-Gesundheit")
+            .setContentIntent(buildMainActivityIntent())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
@@ -69,8 +88,9 @@ class BatteryNotificationManager @Inject constructor(
     fun showTemperatureAlarmNotification(tempCelsius: Float) {
         val notification = NotificationCompat.Builder(context, Constants.NOTIFICATION_CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("High Battery Temperature")
-            .setContentText("Battery temperature is %.1f°C — let device cool down".format(tempCelsius))
+            .setContentTitle("Hohe Akkutemperatur")
+            .setContentText("Akkutemperatur %.1f°C — Gerät abkühlen lassen".format(tempCelsius))
+            .setContentIntent(buildMainActivityIntent())
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
@@ -80,8 +100,9 @@ class BatteryNotificationManager @Inject constructor(
     fun showAnomalyNotification(currentDrain: Float, baseline: Float) {
         val notification = NotificationCompat.Builder(context, Constants.NOTIFICATION_CHANNEL_ALERTS)
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setContentTitle("Abnormal Battery Drain")
-            .setContentText("Screen-off drain %.1f%%/h vs baseline %.1f%%/h — check background apps".format(currentDrain, baseline))
+            .setContentTitle("Ungewöhnlicher Akkuverbrauch")
+            .setContentText("Verbrauch %.1f%%/h vs. Basislinie %.1f%%/h — Hintergrund-Apps prüfen".format(currentDrain, baseline))
+            .setContentIntent(buildMainActivityIntent())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()

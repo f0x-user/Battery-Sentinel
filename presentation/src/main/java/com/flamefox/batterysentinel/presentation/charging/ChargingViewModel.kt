@@ -2,7 +2,9 @@ package com.flamefox.batterysentinel.presentation.charging
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flamefox.batterysentinel.domain.model.BatteryState
 import com.flamefox.batterysentinel.domain.model.ChargingSession
+import com.flamefox.batterysentinel.domain.repository.BatteryRepository
 import com.flamefox.batterysentinel.domain.usecase.GetBatteryHealthUseCase
 import com.flamefox.batterysentinel.domain.usecase.GetChargingSessionsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,13 +19,15 @@ import javax.inject.Inject
 data class ChargingUiState(
     val sessions: List<ChargingSession> = emptyList(),
     val averageHealthPercent: Float? = null,
+    val currentBattery: BatteryState? = null,
     val isLoading: Boolean = true
 )
 
 @HiltViewModel
 class ChargingViewModel @Inject constructor(
     private val getChargingSessionsUseCase: GetChargingSessionsUseCase,
-    private val getBatteryHealthUseCase: GetBatteryHealthUseCase
+    private val getBatteryHealthUseCase: GetBatteryHealthUseCase,
+    private val batteryRepository: BatteryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChargingUiState())
@@ -40,6 +44,13 @@ class ChargingViewModel @Inject constructor(
         getBatteryHealthUseCase()
             .onEach { health ->
                 _uiState.value = _uiState.value.copy(averageHealthPercent = health)
+            }
+            .catch { }
+            .launchIn(viewModelScope)
+
+        batteryRepository.observeBatteryState()
+            .onEach { battery ->
+                _uiState.value = _uiState.value.copy(currentBattery = battery)
             }
             .catch { }
             .launchIn(viewModelScope)

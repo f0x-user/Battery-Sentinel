@@ -14,6 +14,9 @@ class AppUsageRepositoryImpl @Inject constructor(
     override suspend fun getAppUsageStats(periodMs: Long): List<AppUsage> =
         dataSource.getAppUsageStats(periodMs)
 
+    override suspend fun getAppUsageStatsForRange(startTime: Long, endTime: Long): List<AppUsage> =
+        dataSource.getAppUsageStatsForRange(startTime, endTime)
+
     override suspend fun getPerAppBatteryUsage(): List<AppUsage> =
         dataSource.getPerAppBatteryUsage()
 

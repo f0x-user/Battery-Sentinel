@@ -26,4 +26,5 @@ interface SystemSettingsRepository {
     suspend fun saveSystemBackup()
     suspend fun restoreSystemBackup(): Boolean
     fun getSystemBackup(): Flow<SystemBackup?>
+    fun getAllSystemBackups(): Flow<List<SystemBackup>>
 }

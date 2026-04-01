@@ -42,9 +42,13 @@ class AppUsageDataSource @Inject constructor(
     fun getAppUsageStats(periodMs: Long): List<AppUsage> {
         val endTime = System.currentTimeMillis()
         val startTime = endTime - periodMs
+        return getAppUsageStatsForRange(startTime, endTime)
+    }
 
+    @SuppressLint("MissingPermission")
+    fun getAppUsageStatsForRange(startTime: Long, endTime: Long): List<AppUsage> {
         val usageStats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY, startTime, endTime
+            UsageStatsManager.INTERVAL_BEST, startTime, endTime
         ) ?: return emptyList()
 
         val pm = context.packageManager
@@ -62,6 +66,7 @@ class AppUsageDataSource @Inject constructor(
                     foregroundTimeMs = stats.totalTimeInForeground
                 )
             }
+            .sortedByDescending { it.foregroundTimeMs }
     }
 
     @Suppress("UNCHECKED_CAST")

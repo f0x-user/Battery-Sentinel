@@ -1,6 +1,9 @@
 package com.flamefox.batterysentinel.presentation.navigation
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Apps
@@ -14,78 +17,81 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.flamefox.batterysentinel.presentation.apps.AppsScreen
 import com.flamefox.batterysentinel.presentation.charging.ChargingScreen
 import com.flamefox.batterysentinel.presentation.dashboard.DashboardScreen
 import com.flamefox.batterysentinel.presentation.onboarding.OnboardingScreen
 import com.flamefox.batterysentinel.presentation.optimize.OptimizeScreen
 import com.flamefox.batterysentinel.presentation.settings.SettingsScreen
+import kotlinx.coroutines.launch
 
-data class BottomNavItem(val screen: Screen, val label: String, val icon: ImageVector)
+private data class TabItem(val label: String, val icon: ImageVector)
+
+private val mainTabs = listOf(
+    TabItem("Dashboard", Icons.Filled.BatteryFull),
+    TabItem("Charging", Icons.Filled.Analytics),
+    TabItem("Apps", Icons.Filled.Apps),
+    TabItem("Optimize", Icons.Filled.Tune),
+    TabItem("Settings", Icons.Filled.Settings)
+)
 
 @Composable
 fun AppNavigation(startDestination: String = Screen.Dashboard.route) {
-    val navController = rememberNavController()
-    val bottomNavItems = listOf(
-        BottomNavItem(Screen.Dashboard, "Dashboard", Icons.Filled.BatteryFull),
-        BottomNavItem(Screen.Charging, "Charging", Icons.Filled.Analytics),
-        BottomNavItem(Screen.Apps, "Apps", Icons.Filled.Apps),
-        BottomNavItem(Screen.Optimize, "Optimize", Icons.Filled.Tune),
-        BottomNavItem(Screen.Settings, "Settings", Icons.Filled.Settings)
-    )
+    var onboardingDone by remember {
+        mutableStateOf(startDestination != Screen.Onboarding.route)
+    }
+
+    if (!onboardingDone) {
+        OnboardingScreen(onComplete = { onboardingDone = true })
+    } else {
+        MainTabsScreen()
+    }
+}
+
+@Composable
+private fun MainTabsScreen() {
+    val pagerState = rememberPagerState(pageCount = { mainTabs.size })
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
-            val navBackStackEntry by navController.currentBackStackEntryAsState()
-            val currentDestination = navBackStackEntry?.destination
-            val showBottomBar = currentDestination?.route != Screen.Onboarding.route
-            if (showBottomBar) {
-                NavigationBar {
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == item.screen.route } == true,
-                            onClick = {
-                                navController.navigate(item.screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
+            NavigationBar {
+                mainTabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        label = { Text(tab.label) },
+                        selected = pagerState.currentPage == index,
+                        onClick = {
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(
+                                    index,
+                                    animationSpec = tween(300)
+                                )
                             }
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
     ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = startDestination,
-            modifier = Modifier.padding(padding)
-        ) {
-            composable(Screen.Onboarding.route) {
-                OnboardingScreen(onComplete = {
-                    navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
-                    }
-                })
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.padding(padding),
+            userScrollEnabled = true
+        ) { page ->
+            when (page) {
+                0 -> DashboardScreen()
+                1 -> ChargingScreen()
+                2 -> AppsScreen()
+                3 -> OptimizeScreen()
+                4 -> SettingsScreen()
             }
-            composable(Screen.Dashboard.route) { DashboardScreen() }
-            composable(Screen.Charging.route) { ChargingScreen() }
-            composable(Screen.Apps.route) { AppsScreen() }
-            composable(Screen.Optimize.route) { OptimizeScreen() }
-            composable(Screen.Settings.route) { SettingsScreen() }
         }
     }
 }

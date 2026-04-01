@@ -22,7 +22,9 @@ data class SettingsUiState(
     val hasBatteryStatsPermission: Boolean = false,
     val hasWriteSecureSettingsPermission: Boolean = false,
     val systemBackup: SystemBackup? = null,
-    val restoreResult: RestoreResult? = null
+    val allBackups: List<SystemBackup> = emptyList(),
+    val restoreResult: RestoreResult? = null,
+    val showAbout: Boolean = false
 )
 
 enum class RestoreResult { SUCCESS, PARTIAL, NO_BACKUP }
@@ -46,6 +48,12 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.getSystemBackup()
             .onEach { backup ->
                 _uiState.value = _uiState.value.copy(systemBackup = backup)
+            }
+            .launchIn(viewModelScope)
+
+        settingsRepository.getAllSystemBackups()
+            .onEach { backups ->
+                _uiState.value = _uiState.value.copy(allBackups = backups)
             }
             .launchIn(viewModelScope)
 
@@ -98,5 +106,13 @@ class SettingsViewModel @Inject constructor(
 
     fun clearRestoreResult() {
         _uiState.value = _uiState.value.copy(restoreResult = null)
+    }
+
+    fun showAbout() {
+        _uiState.value = _uiState.value.copy(showAbout = true)
+    }
+
+    fun hideAbout() {
+        _uiState.value = _uiState.value.copy(showAbout = false)
     }
 }

@@ -41,6 +41,22 @@ class BatteryManagerDataSource @Inject constructor(
         awaitClose { context.unregisterReceiver(receiver) }
     }
 
+    private fun readCycleCount(): Int {
+        val paths = listOf(
+            "/sys/class/power_supply/battery/cycle_count",
+            "/sys/class/power_supply/Battery/cycle_count"
+        )
+        for (path in paths) {
+            try {
+                val file = java.io.File(path)
+                if (file.exists() && file.canRead()) {
+                    return file.readText().trim().toIntOrNull() ?: 0
+                }
+            } catch (_: Exception) { }
+        }
+        return 0
+    }
+
     fun readCurrentState(): BatteryState {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         return parseBatteryIntent(intent)
@@ -54,6 +70,7 @@ class BatteryManagerDataSource @Inject constructor(
         val rawTemp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         val tempCelsius = rawTemp / 10f
         val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
+        val cycleCount = readCycleCount()
         val rawStatus = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
         val rawPlugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
 
@@ -82,7 +99,8 @@ class BatteryManagerDataSource @Inject constructor(
             isCharging = isCharging,
             chargeStatus = chargeStatus,
             pluggedType = pluggedType,
-            chargeCounter = chargeCounter
+            chargeCounter = chargeCounter,
+            cycleCount = cycleCount
         )
     }
 }

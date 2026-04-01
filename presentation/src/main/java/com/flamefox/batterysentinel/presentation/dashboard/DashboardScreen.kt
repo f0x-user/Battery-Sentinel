@@ -132,8 +132,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 else MaterialTheme.colorScheme.onSurface
             )
             StatCard(
-                label = "Charge Counter",
-                value = "${battery.chargeCounter / 1000} mAh",
+                label = "Ladezyklen",
+                value = if (battery.cycleCount > 0) "${battery.cycleCount}" else "N/A",
                 modifier = Modifier.weight(1f)
             )
         }

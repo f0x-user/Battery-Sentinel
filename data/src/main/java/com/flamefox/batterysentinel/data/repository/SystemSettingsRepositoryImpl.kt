@@ -66,4 +66,6 @@ class SystemSettingsRepositoryImpl @Inject constructor(
     }
 
     override fun getSystemBackup(): Flow<SystemBackup?> = backupStore.backup
+
+    override fun getAllSystemBackups(): Flow<List<SystemBackup>> = backupStore.allBackups
 }
