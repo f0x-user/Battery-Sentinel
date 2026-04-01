@@ -1,7 +1,11 @@
 package com.flamefox.batterysentinel.presentation.charging
 
 import app.cash.turbine.test
+import com.flamefox.batterysentinel.domain.model.BatteryState
+import com.flamefox.batterysentinel.domain.model.ChargeStatus
 import com.flamefox.batterysentinel.domain.model.ChargingSession
+import com.flamefox.batterysentinel.domain.model.PluggedType
+import com.flamefox.batterysentinel.domain.repository.BatteryRepository
 import com.flamefox.batterysentinel.domain.usecase.GetBatteryHealthUseCase
 import com.flamefox.batterysentinel.domain.usecase.GetChargingSessionsUseCase
 import io.mockk.every
@@ -24,6 +28,14 @@ class ChargingViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val getChargingSessions: GetChargingSessionsUseCase = mockk()
     private val getBatteryHealth: GetBatteryHealthUseCase = mockk()
+    private val batteryRepository: BatteryRepository = mockk()
+
+    private val sampleBattery = BatteryState(
+        percentage = 72, currentMa = 1200, voltageMv = 4100,
+        temperatureCelsius = 28f, isCharging = true,
+        chargeStatus = ChargeStatus.CHARGING, pluggedType = PluggedType.USB,
+        chargeCounter = 3000
+    )
 
     private val sessions = listOf(
         ChargingSession(1L, 1000L, 4600L, 20, 80, 1000, 4000, 3000f, 89f),
@@ -35,6 +47,7 @@ class ChargingViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { getChargingSessions(any()) } returns flowOf(sessions)
         every { getBatteryHealth() } returns flowOf(89f)
+        every { batteryRepository.observeBatteryState() } returns flowOf(sampleBattery)
     }
 
     @AfterEach
@@ -44,7 +57,7 @@ class ChargingViewModelTest {
 
     @Test
     fun `sessions are loaded into ui state`() = runTest {
-        val viewModel = ChargingViewModel(getChargingSessions, getBatteryHealth)
+        val viewModel = ChargingViewModel(getChargingSessions, getBatteryHealth, batteryRepository)
 
         viewModel.uiState.test {
             awaitItem() // initial
@@ -57,7 +70,7 @@ class ChargingViewModelTest {
 
     @Test
     fun `health is loaded into ui state`() = runTest {
-        val viewModel = ChargingViewModel(getChargingSessions, getBatteryHealth)
+        val viewModel = ChargingViewModel(getChargingSessions, getBatteryHealth, batteryRepository)
 
         viewModel.uiState.test {
             awaitItem()

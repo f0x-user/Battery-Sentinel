@@ -20,6 +20,22 @@ android {
         testInstrumentationRunner = "com.flamefox.batterysentinel.HiltTestRunner"
     }
 
+    val keystoreFile = System.getenv("KEYSTORE_PATH")
+    val keystorePass = System.getenv("KEYSTORE_PASSWORD")
+    val keyAlias = System.getenv("KEY_ALIAS")
+    val keyPass = System.getenv("KEY_PASSWORD")
+
+    if (keystoreFile != null && keystorePass != null && keyAlias != null && keyPass != null) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreFile)
+                storePassword = keystorePass
+                this.keyAlias = keyAlias
+                keyPassword = keyPass
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -27,6 +43,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            val releaseSigning = signingConfigs.findByName("release")
+            if (releaseSigning != null) signingConfig = releaseSigning
         }
     }
 

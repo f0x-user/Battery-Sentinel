@@ -5,6 +5,7 @@ import com.flamefox.batterysentinel.domain.model.BatteryState
 import com.flamefox.batterysentinel.domain.model.ChargeStatus
 import com.flamefox.batterysentinel.domain.model.DrainRate
 import com.flamefox.batterysentinel.domain.model.PluggedType
+import com.flamefox.batterysentinel.domain.repository.ChargingSessionRepository
 import com.flamefox.batterysentinel.domain.usecase.GetBatteryStateUseCase
 import com.flamefox.batterysentinel.domain.usecase.GetDrainRateUseCase
 import io.mockk.every
@@ -28,6 +29,7 @@ class DashboardViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private val getBatteryState: GetBatteryStateUseCase = mockk()
     private val getDrainRate: GetDrainRateUseCase = mockk()
+    private val chargingSessionRepository: ChargingSessionRepository = mockk()
 
     private val sampleState = BatteryState(
         percentage = 65, currentMa = -320, voltageMv = 3950,
@@ -43,6 +45,7 @@ class DashboardViewModelTest {
         Dispatchers.setMain(testDispatcher)
         every { getBatteryState() } returns flowOf(sampleState)
         every { getDrainRate() } returns flowOf(sampleDrain)
+        every { chargingSessionRepository.getAllSessions() } returns flowOf(emptyList())
     }
 
     @AfterEach
@@ -52,7 +55,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `uiState reflects battery state after collection`() = runTest {
-        val viewModel = DashboardViewModel(getBatteryState, getDrainRate)
+        val viewModel = DashboardViewModel(getBatteryState, getDrainRate, chargingSessionRepository)
 
         viewModel.uiState.test {
             val loading = awaitItem()
@@ -67,7 +70,7 @@ class DashboardViewModelTest {
 
     @Test
     fun `uiState reflects drain rate after collection`() = runTest {
-        val viewModel = DashboardViewModel(getBatteryState, getDrainRate)
+        val viewModel = DashboardViewModel(getBatteryState, getDrainRate, chargingSessionRepository)
 
         viewModel.uiState.test {
             awaitItem() // initial
