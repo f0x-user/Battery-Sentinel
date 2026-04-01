@@ -59,17 +59,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Build Release APK (unsigned)
+        run: ./gradlew assembleRelease
+
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 --decode > ${{ github.workspace }}/release.jks
+          echo "${{ secrets.KEYSTORE }}" | base64 -d > ${{ github.workspace }}/release.jks
 
-      - name: Build Release APK (signed)
-        run: ./gradlew assembleRelease
-        env:
-          KEYSTORE_PATH: ${{ github.workspace }}/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Sign APK with apksigner
+        run: |
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
+          BUILD_TOOLS=$(ls ${ANDROID_HOME}/build-tools/ | sort -V | tail -1)
+          ${ANDROID_HOME}/build-tools/${BUILD_TOOLS}/apksigner sign \
+            --ks ${{ github.workspace }}/release.jks \
+            --ks-type PKCS12 \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
+            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
+            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+            --out "${SIGNED_APK}" \
+            "${UNSIGNED_APK}"
+          echo "SIGNED_APK=${SIGNED_APK}" >> $GITHUB_ENV
 
       - name: Get version name
         id: version
@@ -100,8 +110,8 @@ jobs:
             - Fix: Drain-Rate aktualisiert sich jede Minute
 
             ### Installationshinweis
-            Da die APK nicht signiert ist, muss sie manuell signiert oder "Unbekannte Quellen" aktiviert werden.
-          files: app/build/outputs/apk/release/*.apk
+            Die APK ist signiert und kann direkt installiert werden (Unbekannte Quellen aktivieren).
+          files: ${{ env.SIGNED_APK }}
           draft: false
           prerelease: false
           make_latest: true
