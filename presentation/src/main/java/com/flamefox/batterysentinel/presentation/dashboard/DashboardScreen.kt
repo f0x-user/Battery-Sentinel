@@ -132,56 +132,71 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 else MaterialTheme.colorScheme.onSurface
             )
             StatCard(
-                label = if (battery.cycleCount > 0) "Charge Cycles" else "Sessions",
-                value = if (battery.cycleCount > 0) "${battery.cycleCount}"
-                        else if (state.trackedSessionCount > 0) "${state.trackedSessionCount}"
-                        else "—",
-                modifier = Modifier.weight(1f)
+                label = "Charge Cycles",
+                value = if (battery.cycleCount > 0) "${battery.cycleCount}" else "—",
+                modifier = Modifier.weight(1f),
+                unit = if (battery.cycleCount <= 0) "hardware" else ""
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-
-        val healthColor = when (battery.hardwareHealth.lowercase()) {
-            "good" -> BatteryGreen
-            "overheat", "cold" -> BatteryOrange
-            "dead", "over voltage", "overvoltage", "failure" -> BatteryRed
-            else -> MaterialTheme.colorScheme.onSurface
-        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatCard(
+                label = "Sessions (tracked)",
+                value = if (state.trackedSessionCount > 0) "${state.trackedSessionCount}" else "—",
+                modifier = Modifier.weight(1f),
+                unit = "since install"
+            )
+            StatCard(
                 label = "Health Status",
                 value = battery.hardwareHealth.ifEmpty { "—" },
                 modifier = Modifier.weight(1f),
-                valueColor = if (battery.hardwareHealth.isNotEmpty()) healthColor
-                             else MaterialTheme.colorScheme.onSurface
+                valueColor = when (battery.hardwareHealth.lowercase()) {
+                    "good" -> BatteryGreen
+                    "overheat", "cold" -> BatteryOrange
+                    "dead", "over voltage", "overvoltage", "failure" -> BatteryRed
+                    else -> MaterialTheme.colorScheme.onSurface
+                }
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             StatCard(
                 label = "Max Capacity",
                 value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
                 modifier = Modifier.weight(1f),
                 unit = if (battery.maxCapacityMah > 0) "est. from charge level" else ""
             )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
             StatCard(
                 label = "Plugged",
                 value = battery.pluggedType.name,
                 modifier = Modifier.weight(1f)
             )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             StatCard(
                 label = "Drain Rate",
                 value = state.drainRate.percentPerHour.toPercentPerHourString(),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                label = "Screen-On Drain",
+                value = state.drainRate.screenOnPercentPerHour.toPercentPerHourString(),
                 modifier = Modifier.weight(1f)
             )
         }
@@ -193,13 +208,13 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatCard(
-                label = "Screen-On Drain",
-                value = state.drainRate.screenOnPercentPerHour.toPercentPerHourString(),
+                label = "Screen-Off Drain",
+                value = state.drainRate.screenOffPercentPerHour.toPercentPerHourString(),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                label = "Screen-Off Drain",
-                value = state.drainRate.screenOffPercentPerHour.toPercentPerHourString(),
+                label = "Plugged",
+                value = battery.pluggedType.name,
                 modifier = Modifier.weight(1f)
             )
         }

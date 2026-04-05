@@ -2,7 +2,6 @@ package com.flamefox.batterysentinel.data.source
 
 import android.content.ContentResolver
 import android.content.Context
-import android.content.SyncStatusObserver
 import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.provider.Settings
@@ -84,6 +83,9 @@ class SystemSettingsDataSource @Inject constructor(
     } catch (e: SecurityException) {
         false
     }
+
+    fun isIgnoringBatteryOptimizations(): Boolean =
+        powerManager.isIgnoringBatteryOptimizations(context.packageName)
 
     fun hasWriteSettingsPermission(): Boolean =
         Settings.System.canWrite(context)

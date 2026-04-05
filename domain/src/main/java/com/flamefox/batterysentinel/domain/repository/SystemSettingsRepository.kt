@@ -19,6 +19,7 @@ interface SystemSettingsRepository {
     suspend fun setSync(enabled: Boolean)
     fun getDozeStatus(): String
     suspend fun setDozeConstants(constants: String): Boolean
+    fun isIgnoringBatteryOptimizations(): Boolean
     fun hasWriteSettingsPermission(): Boolean
     fun hasWriteSecureSettingsPermission(): Boolean
 

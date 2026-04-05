@@ -20,7 +20,6 @@ data class SettingsUiState(
     val hasUsageStatsPermission: Boolean = false,
     val hasWriteSettingsPermission: Boolean = false,
     val hasBatteryStatsPermission: Boolean = false,
-    val hasWriteSecureSettingsPermission: Boolean = false,
     val systemBackup: SystemBackup? = null,
     val allBackups: List<SystemBackup> = emptyList(),
     val restoreResult: RestoreResult? = null,
@@ -65,8 +64,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             hasUsageStatsPermission = appUsageRepository.hasUsageStatsPermission(),
             hasWriteSettingsPermission = settingsRepository.hasWriteSettingsPermission(),
-            hasBatteryStatsPermission = appUsageRepository.hasBatteryStatsPermission(),
-            hasWriteSecureSettingsPermission = settingsRepository.hasWriteSecureSettingsPermission()
+            hasBatteryStatsPermission = appUsageRepository.hasBatteryStatsPermission()
         )
     }
 

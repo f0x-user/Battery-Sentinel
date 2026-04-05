@@ -37,6 +37,7 @@ class SystemSettingsRepositoryImpl @Inject constructor(
     override suspend fun setSync(enabled: Boolean) = dataSource.setSync(enabled)
     override fun getDozeStatus(): String = dataSource.getDozeStatus()
     override suspend fun setDozeConstants(constants: String): Boolean = dataSource.setDozeConstants(constants)
+    override fun isIgnoringBatteryOptimizations(): Boolean = dataSource.isIgnoringBatteryOptimizations()
     override fun hasWriteSettingsPermission(): Boolean = dataSource.hasWriteSettingsPermission()
     override fun hasWriteSecureSettingsPermission(): Boolean = dataSource.hasWriteSecureSettingsPermission()
 

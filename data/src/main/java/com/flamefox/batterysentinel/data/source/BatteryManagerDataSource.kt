@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -46,29 +47,43 @@ class BatteryManagerDataSource @Inject constructor(
         return parseBatteryIntent(intent)
     }
 
+    /**
+     * Reads the hardware charge cycle count.
+     * Tries sysfs first (no permission required on Pixel devices), then falls back to
+     * BatteryManager.BATTERY_PROPERTY_CYCLE_COUNT (API 28). Returns -1 if unavailable.
+     */
+    fun readCycleCount(): Int {
+        try {
+            val sysfsValue = File("/sys/class/power_supply/battery/cycle_count")
+                .takeIf { it.exists() && it.canRead() }
+                ?.readText()?.trim()?.toIntOrNull()
+            if (sysfsValue != null && sysfsValue > 0) return sysfsValue
+        } catch (_: Exception) {}
+        return try {
+            batteryManager.getIntProperty(9 /* BATTERY_PROPERTY_CYCLE_COUNT */)
+                .takeIf { it > 0 } ?: -1
+        } catch (_: SecurityException) { -1 }
+    }
+
     private fun parseBatteryIntent(intent: Intent?): BatteryState {
-        // Percentage — Intent extras need no permissions and are always available.
+        // Percentage from Intent extras — no permissions required, always available.
         val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = intent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val percentage = if (level >= 0 && scale > 0) (level * 100 / scale)
         else batteryIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY, 0)
 
         // Current (µA → mA) and charge counter (µAh) require BATTERY_STATS on API 36.
-        // Gracefully fall back to 0 when the permission is not granted so the app never
-        // crashes — users who grant the permission via ADB get the full values.
+        // Fall back to 0 when the permission is not granted — app never crashes.
         val rawCurrent = batteryIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW, 0)
         val currentMa = rawCurrent / 1000
 
         val chargeCounter = batteryIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER, 0)
 
-        // Cycle count via property ID 9 (BATTERY_PROPERTY_CYCLE_COUNT, API 28+).
-        val cycleCount = batteryIntProperty(9, 0).takeIf { it > 2 } ?: 0
-
         val voltageMv = intent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
         val rawTemp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
         val tempCelsius = rawTemp / 10f
 
-        // Health: EXTRA_HEALTH needs no permissions.
+        // Health needs no permissions.
         val healthCode = intent?.getIntExtra(
             BatteryManager.EXTRA_HEALTH,
             BatteryManager.BATTERY_HEALTH_UNKNOWN
@@ -120,21 +135,20 @@ class BatteryManagerDataSource @Inject constructor(
             chargeStatus = chargeStatus,
             pluggedType = pluggedType,
             chargeCounter = chargeCounter,
-            cycleCount = cycleCount,
+            cycleCount = readCycleCount(),
             maxCapacityMah = maxCapacityMah,
             hardwareHealth = hardwareHealth
         )
     }
 
     /**
-     * Reads a BatteryManager integer property, returning [default] on SecurityException.
-     * Some properties (CURRENT_NOW, CHARGE_COUNTER, CYCLE_COUNT) require BATTERY_STATS
-     * on Android 16+ and are only available after an explicit ADB grant.
+     * Wraps getIntProperty with SecurityException handling.
+     * CURRENT_NOW, CHARGE_COUNTER, CYCLE_COUNT require BATTERY_STATS on Android 16+.
      */
     private fun batteryIntProperty(property: Int, default: Int): Int =
         try {
             batteryManager.getIntProperty(property)
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             default
         }
 }

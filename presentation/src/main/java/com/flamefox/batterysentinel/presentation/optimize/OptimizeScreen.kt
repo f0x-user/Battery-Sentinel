@@ -1,6 +1,7 @@
 package com.flamefox.batterysentinel.presentation.optimize
 
 import android.content.Intent
+import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,6 +39,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -103,10 +107,8 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                             MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        if (state.hasPendingChanges)
-                            "Pending changes — press Run to apply."
-                        else
-                            "No pending changes.",
+                        if (state.hasPendingChanges) "Pending changes — press Run to apply."
+                        else "No pending changes.",
                         style = MaterialTheme.typography.labelSmall,
                         color = if (state.hasPendingChanges)
                             MaterialTheme.colorScheme.onPrimaryContainer
@@ -121,11 +123,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         onClick = viewModel::runOptimizations,
                         enabled = state.hasPendingChanges
                     ) {
-                        Icon(
-                            Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                         Text("  Run", style = MaterialTheme.typography.labelMedium)
                     }
                 }
@@ -140,11 +138,9 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 OptimizeSectionHeader(
                     title = "Display Brightness",
                     icon = Icons.Filled.Brightness4,
-                    tip = "Display is often the largest battery consumer — lower brightness saves up to 20%.",
+                    tip = "Display is the largest battery consumer — lower brightness saves up to 20%.",
                     hasPermission = state.hasWriteSettingsPermission,
-                    onGrantPermission = {
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS))
-                    }
+                    onGrantPermission = { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -158,10 +154,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
                 if (!state.pendingIsAdaptiveBrightness) {
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Brightness: ${state.pendingBrightness} / 255",
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    Text("Brightness: ${state.pendingBrightness} / 255", style = MaterialTheme.typography.labelSmall)
                     Slider(
                         value = state.pendingBrightness.toFloat(),
                         onValueChange = { viewModel.setBrightness(it.toInt()) },
@@ -169,12 +162,8 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         enabled = state.hasWriteSettingsPermission
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        QuickSetButton("Low (60)", enabled = state.hasWriteSettingsPermission) {
-                            viewModel.setBrightness(60)
-                        }
-                        QuickSetButton("Medium (128)", enabled = state.hasWriteSettingsPermission) {
-                            viewModel.setBrightness(128)
-                        }
+                        QuickSetButton("Low (60)", enabled = state.hasWriteSettingsPermission) { viewModel.setBrightness(60) }
+                        QuickSetButton("Medium (128)", enabled = state.hasWriteSettingsPermission) { viewModel.setBrightness(128) }
                     }
                 }
             }
@@ -190,18 +179,14 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                     icon = Icons.Filled.LockClock,
                     tip = "Shorter timeout saves power when you put down your device.",
                     hasPermission = state.hasWriteSettingsPermission,
-                    onGrantPermission = {
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS))
-                    }
+                    onGrantPermission = { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val timeoutOptions = listOf(15000, 30000, 60000, 120000, 300000, 600000)
                 val timeoutLabels = listOf("15s", "30s", "1m", "2m", "5m", "10m")
                 var expanded by remember { mutableStateOf(false) }
-                val selectedLabel = timeoutLabels[
-                    timeoutOptions.indexOfFirst { it == state.pendingScreenTimeout }.coerceAtLeast(0)
-                ]
+                val selectedLabel = timeoutLabels[timeoutOptions.indexOfFirst { it == state.pendingScreenTimeout }.coerceAtLeast(0)]
 
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
                     TextField(
@@ -217,10 +202,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         timeoutOptions.zip(timeoutLabels).forEach { (ms, label) ->
                             DropdownMenuItem(
                                 text = { Text(label) },
-                                onClick = {
-                                    viewModel.setScreenTimeout(ms)
-                                    expanded = false
-                                }
+                                onClick = { viewModel.setScreenTimeout(ms); expanded = false }
                             )
                         }
                     }
@@ -230,38 +212,71 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Power management
+        // Power management — read-only status + open-in-settings actions
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                OptimizeSectionHeader(
-                    title = "Power Management",
-                    icon = Icons.Filled.Power,
-                    tip = "Battery saver and Doze significantly reduce background activity.",
-                    hasPermission = state.hasWriteSecureSettingsPermission,
-                    onGrantPermission = null,
-                    permissionNote = "ADB permission required (in Settings → Permissions)"
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Power, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("  Power Management", style = MaterialTheme.typography.titleSmall)
+                }
+                Text(
+                    "Battery saver and battery optimizations are managed through system settings.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                OptimizeRow(
-                    label = "Battery Saver",
-                    description = "Reduces performance and background activity"
+                // Battery saver status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Switch(
-                        checked = state.pendingIsBatterySaverEnabled,
-                        onCheckedChange = { viewModel.toggleBatterySaver() },
-                        enabled = state.hasWriteSecureSettingsPermission
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Battery Saver", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (state.isBatterySaverEnabled) "Currently active" else "Currently inactive",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (state.isBatterySaverEnabled) BatteryGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = { context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)) },
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("Open Settings →", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
 
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
 
-                Text("Doze Status", style = MaterialTheme.typography.labelMedium)
-                Text(
-                    state.dozeStatus,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Battery optimizations status
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Battery Optimizations", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            if (state.isIgnoringBatteryOptimizations) "Unrestricted (ignoring optimizations)"
+                            else "Optimized by Android",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (state.isIgnoringBatteryOptimizations) BatteryOrange
+                            else BatteryGreen
+                        )
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            val uri = Uri.parse("package:${context.packageName}")
+                            context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, uri))
+                        },
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text("Configure →", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
         }
 
@@ -276,15 +291,8 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                     tip = "Disabled sync saves significant power on poor connections."
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-
-                OptimizeRow(
-                    label = "Auto-Sync",
-                    description = "Background refresh for all accounts"
-                ) {
-                    Switch(
-                        checked = state.pendingIsSyncEnabled,
-                        onCheckedChange = { viewModel.setSync(it) }
-                    )
+                OptimizeRow(label = "Auto-Sync", description = "Background refresh for all accounts") {
+                    Switch(checked = state.pendingIsSyncEnabled, onCheckedChange = { viewModel.setSync(it) })
                 }
             }
         }
@@ -298,39 +306,15 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Filled.BatteryAlert,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        "  Battery Care Tips",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
+                    Icon(Icons.Filled.BatteryAlert, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+                    Text("  Battery Care Tips", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.secondary)
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                BatteryTip(
-                    icon = Icons.Filled.BatteryAlert,
-                    text = "Charge between 20% and 80% — avoid daily full charges to 100%"
-                )
-                BatteryTip(
-                    icon = Icons.Filled.Thermostat,
-                    text = "Overheating above 40°C permanently damages the battery — disconnect charger in heat"
-                )
-                BatteryTip(
-                    icon = Icons.Filled.BrightnessAuto,
-                    text = "Enabling adaptive brightness saves up to 15% in daily use"
-                )
-                BatteryTip(
-                    icon = Icons.Filled.NetworkCheck,
-                    text = "Using Wi-Fi instead of mobile data saves up to 30% compared to 5G"
-                )
-                BatteryTip(
-                    icon = Icons.Filled.LockClock,
-                    text = "Setting a 15–30s screen timeout noticeably extends battery life"
-                )
+                BatteryTip(Icons.Filled.BatteryAlert, "Charge between 20% and 80% — avoid daily full charges to 100%")
+                BatteryTip(Icons.Filled.Thermostat, "Overheating above 40°C permanently damages the battery — disconnect charger in heat")
+                BatteryTip(Icons.Filled.BrightnessAuto, "Enabling adaptive brightness saves up to 15% in daily use")
+                BatteryTip(Icons.Filled.NetworkCheck, "Using Wi-Fi instead of mobile data saves up to 30% compared to 5G")
+                BatteryTip(Icons.Filled.LockClock, "Setting a 15–30s screen timeout noticeably extends battery life")
             }
         }
 
@@ -344,8 +328,7 @@ private fun OptimizeSectionHeader(
     icon: ImageVector,
     tip: String,
     hasPermission: Boolean = true,
-    onGrantPermission: (() -> Unit)? = null,
-    permissionNote: String? = null
+    onGrantPermission: (() -> Unit)? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -357,46 +340,18 @@ private fun OptimizeSectionHeader(
             Text("  $title", style = MaterialTheme.typography.titleSmall)
         }
         when {
-            hasPermission -> Icon(
-                Icons.Filled.Check,
-                contentDescription = "Permission granted",
-                tint = BatteryGreen,
-                modifier = Modifier.size(16.dp)
-            )
-            onGrantPermission != null -> Button(
-                onClick = onGrantPermission,
-                modifier = Modifier.height(32.dp)
-            ) { Text("Grant", style = MaterialTheme.typography.labelSmall) }
-            else -> Text(
-                "ADB",
-                style = MaterialTheme.typography.labelSmall,
-                color = BatteryOrange
-            )
+            hasPermission -> Icon(Icons.Filled.Check, contentDescription = "Permission granted", tint = BatteryGreen, modifier = Modifier.size(16.dp))
+            onGrantPermission != null -> Button(onClick = onGrantPermission, modifier = Modifier.height(32.dp)) {
+                Text("Grant", style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
-    Text(
-        tip,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 2.dp)
-    )
-    if (!hasPermission && permissionNote != null) {
-        Text(
-            permissionNote,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.padding(top = 2.dp)
-        )
-    }
+    Text(tip, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
 }
 
 @Composable
 private fun OptimizeRow(label: String, description: String, control: @Composable () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(description, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -414,20 +369,8 @@ private fun QuickSetButton(label: String, enabled: Boolean, onClick: () -> Unit)
 
 @Composable
 private fun BatteryTip(icon: ImageVector, text: String) {
-    Row(
-        modifier = Modifier.padding(vertical = 3.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            icon,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp).padding(top = 1.dp),
-            tint = MaterialTheme.colorScheme.secondary
-        )
-        Text(
-            "  $text",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer
-        )
+    Row(modifier = Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.Top) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp).padding(top = 1.dp), tint = MaterialTheme.colorScheme.secondary)
+        Text("  $text", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
     }
 }
