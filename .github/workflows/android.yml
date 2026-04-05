@@ -23,6 +23,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Install Android SDK components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            2>&1 | tail -5
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -56,6 +63,13 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      - name: Install Android SDK components
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
+            "platforms;android-36" \
+            "build-tools;35.0.0" \
+            2>&1 | tail -5
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
@@ -68,18 +82,21 @@ jobs:
 
       - name: Sign APK with apksigner
         run: |
-          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*-unsigned.apk" | head -1)
+          if [ -z "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
+          fi
           SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
-          BUILD_TOOLS=$(ls ${ANDROID_HOME}/build-tools/ | sort -V | tail -1)
-          ${ANDROID_HOME}/build-tools/${BUILD_TOOLS}/apksigner sign \
-            --ks ${{ github.workspace }}/release.jks \
+          BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)
+          "$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner" sign \
+            --ks "${{ github.workspace }}/release.jks" \
             --ks-type PKCS12 \
-            --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
-            --ks-key-alias ${{ secrets.KEY_ALIAS }} \
-            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
-            --out "${SIGNED_APK}" \
-            "${UNSIGNED_APK}"
-          echo "SIGNED_APK=${SIGNED_APK}" >> $GITHUB_ENV
+            --ks-pass "pass:${{ secrets.KEYSTORE_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.KEY_ALIAS }}" \
+            --key-pass "pass:${{ secrets.KEY_PASSWORD }}" \
+            --out "$SIGNED_APK" \
+            "$UNSIGNED_APK"
+          echo "SIGNED_APK=$SIGNED_APK" >> $GITHUB_ENV
 
       - name: Get version name
         id: version
@@ -95,7 +112,7 @@ jobs:
           body: |
             ## BatterySentinel v${{ steps.version.outputs.version }}
 
-            ### Änderungen in v1.1.0
+            ### Änderungen
             - Swipe-Navigation zwischen Dashboard, Charging, Apps, Optimize, Settings
             - Ladezyklen korrekt aus Hardware/Sysfs auslesen
             - Charging-Tab: Neugestaltung mit aktivem Ladestatus, Leistungsanzeige & ETA
@@ -106,8 +123,6 @@ jobs:
             - Benachrichtigungen öffnen die App beim Antippen
             - Optimize: Überarbeitete Benutzeroberfläche mit Akku-Pflegetipps
             - DSGVO: Datenlöschfunktion, Datenschutzerklärung, 90-Tage-Retention
-            - Fix: HiltTestRunner-Dependency hinzugefügt
-            - Fix: Drain-Rate aktualisiert sich jede Minute
 
             ### Installationshinweis
             Die APK ist signiert und kann direkt installiert werden (Unbekannte Quellen aktivieren).
