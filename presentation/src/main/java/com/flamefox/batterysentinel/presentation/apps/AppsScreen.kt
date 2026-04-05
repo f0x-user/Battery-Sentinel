@@ -51,13 +51,13 @@ fun AppsScreen(viewModel: AppsViewModel = hiltViewModel()) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("App-Nutzung & Akku", style = MaterialTheme.typography.headlineSmall)
+        Text("App Usage & Battery", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
 
         TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Nutzungszeit") })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Akkuverbrauch") })
-            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Pro Zyklus") })
+            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Usage Time") })
+            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Battery Usage") })
+            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Per Cycle") })
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -75,8 +75,8 @@ private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
     if (!state.hasUsageStatsPermission) {
         PermissionPrompt(
-            title = "Nutzungsstatistik-Berechtigung erforderlich",
-            description = "Erteile PACKAGE_USAGE_STATS, um die App-Nutzungszeit (letzte 24h) anzuzeigen.",
+            title = "Usage Statistics Permission Required",
+            description = "Grant PACKAGE_USAGE_STATS to display app usage time (last 24h).",
             onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             onRefresh = viewModel::refresh
         )
@@ -103,8 +103,8 @@ private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
     if (!state.hasBatteryStatsPermission) {
         PermissionPrompt(
-            title = "BATTERY_STATS-Berechtigung erforderlich",
-            description = "Erteile über ADB:\nadb shell pm grant com.flamefox.batterysentinel android.permission.BATTERY_STATS",
+            title = "BATTERY_STATS Permission Required",
+            description = "Grant via ADB:\nadb shell pm grant com.flamefox.batterysentinel android.permission.BATTERY_STATS",
             onGrant = null,
             onRefresh = viewModel::refresh,
             isAdb = true
@@ -133,8 +133,8 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
 
     if (!state.hasUsageStatsPermission) {
         PermissionPrompt(
-            title = "Nutzungsstatistik-Berechtigung erforderlich",
-            description = "Erteile PACKAGE_USAGE_STATS für die Pro-Zyklus-Ansicht.",
+            title = "Usage Statistics Permission Required",
+            description = "Grant PACKAGE_USAGE_STATS for the Per Cycle view.",
             onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
             onRefresh = viewModel::refresh
         )
@@ -145,7 +145,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    "Noch keine abgeschlossenen Ladesitzungen vorhanden.",
+                    "No completed charging sessions available.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -157,11 +157,10 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
     val selected = state.selectedSession
 
     if (selected == null) {
-        // Session-Liste anzeigen
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item {
                 Text(
-                    "Wähle eine Ladesitzung aus:",
+                    "Select a charging session:",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -172,11 +171,10 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
             }
         }
     } else {
-        // App-Nutzung für gewählte Session
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { viewModel.selectSession(null) }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Zurück")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
                 Column {
                     Text(
@@ -197,7 +195,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else if (state.sessionApps.isEmpty()) {
                 Text(
-                    "Keine App-Nutzungsdaten für diesen Zeitraum verfügbar.",
+                    "No app usage data available for this period.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -281,7 +279,7 @@ private fun AppUsageRow(
                     Spacer(modifier = Modifier.size(4.dp))
                     Icon(
                         Icons.Filled.ChevronRight,
-                        contentDescription = "App-Details öffnen",
+                        contentDescription = "Open app details",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
@@ -312,9 +310,9 @@ private fun PermissionPrompt(
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (onGrant != null) {
-                    Button(onClick = onGrant) { Text("Einstellungen öffnen") }
+                    Button(onClick = onGrant) { Text("Open Settings") }
                 }
-                Button(onClick = onRefresh) { Text("Aktualisieren") }
+                Button(onClick = onRefresh) { Text("Refresh") }
             }
         }
     }

@@ -64,22 +64,22 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text("Akku optimieren", style = MaterialTheme.typography.headlineSmall)
+        Text("Optimize Battery", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "Passe Systemeinstellungen direkt an, um die Akkulaufzeit zu verlängern.",
+            "Adjust system settings directly to extend battery life.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Helligkeitssteuerung
+        // Display brightness
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
-                    title = "Display-Helligkeit",
+                    title = "Display Brightness",
                     icon = Icons.Filled.Brightness4,
-                    tip = "Display ist oft der größte Akkuverbraucher — niedrigere Helligkeit spart bis zu 20%.",
+                    tip = "Display is often the largest battery consumer — lower brightness saves up to 20%.",
                     hasPermission = state.hasWriteSettingsPermission,
                     onGrantPermission = {
                         context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS))
@@ -87,7 +87,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OptimizeRow(label = "Adaptive Helligkeit", description = "Helligkeit automatisch anpassen") {
+                OptimizeRow(label = "Adaptive Brightness", description = "Automatically adjust brightness") {
                     Switch(
                         checked = state.isAdaptiveBrightness,
                         onCheckedChange = viewModel::setAdaptiveBrightness,
@@ -98,7 +98,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 if (!state.isAdaptiveBrightness) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Helligkeit: ${state.brightness} / 255",
+                        "Brightness: ${state.brightness} / 255",
                         style = MaterialTheme.typography.labelSmall
                     )
                     Slider(
@@ -108,10 +108,10 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         enabled = state.hasWriteSettingsPermission
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        QuickSetButton("Niedrig (60)", enabled = state.hasWriteSettingsPermission) {
+                        QuickSetButton("Low (60)", enabled = state.hasWriteSettingsPermission) {
                             viewModel.setBrightness(60)
                         }
-                        QuickSetButton("Mittel (128)", enabled = state.hasWriteSettingsPermission) {
+                        QuickSetButton("Medium (128)", enabled = state.hasWriteSettingsPermission) {
                             viewModel.setBrightness(128)
                         }
                     }
@@ -121,13 +121,13 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Screen-Timeout
+        // Screen timeout
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
-                    title = "Bildschirm-Timeout",
+                    title = "Screen Timeout",
                     icon = Icons.Filled.LockClock,
-                    tip = "Kürzeres Timeout spart Strom wenn du das Gerät weglegt.",
+                    tip = "Shorter timeout saves power when you put down your device.",
                     hasPermission = state.hasWriteSettingsPermission,
                     onGrantPermission = {
                         context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS))
@@ -147,7 +147,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         value = selectedLabel,
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Timeout-Dauer") },
+                        label = { Text("Timeout Duration") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                         modifier = Modifier.menuAnchor().fillMaxWidth(),
                         enabled = state.hasWriteSettingsPermission
@@ -169,22 +169,22 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Energiesparmodus & Doze
+        // Power management
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
-                    title = "Energieverwaltung",
+                    title = "Power Management",
                     icon = Icons.Filled.Power,
-                    tip = "Energiesparmodus und Doze reduzieren Hintergrundaktivitäten erheblich.",
+                    tip = "Battery saver and Doze significantly reduce background activity.",
                     hasPermission = state.hasWriteSecureSettingsPermission,
                     onGrantPermission = null,
-                    permissionNote = "ADB-Berechtigung erforderlich (in Einstellungen → Berechtigungen)"
+                    permissionNote = "ADB permission required (in Settings → Permissions)"
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OptimizeRow(
-                    label = "Energiesparmodus",
-                    description = "Reduziert Leistung und Hintergrundaktivität"
+                    label = "Battery Saver",
+                    description = "Reduces performance and background activity"
                 ) {
                     Switch(
                         checked = state.isBatterySaverEnabled,
@@ -195,7 +195,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                Text("Doze-Status", style = MaterialTheme.typography.labelMedium)
+                Text("Doze Status", style = MaterialTheme.typography.labelMedium)
                 Text(
                     state.dozeStatus,
                     style = MaterialTheme.typography.bodySmall,
@@ -206,19 +206,19 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Hintergrund-Synchronisierung
+        // Background sync
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
-                    title = "Hintergrund-Synchronisierung",
+                    title = "Background Sync",
                     icon = Icons.Filled.Sync,
-                    tip = "Deaktivierter Sync spart bei schlechter Verbindung erheblich Strom."
+                    tip = "Disabled sync saves significant power on poor connections."
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OptimizeRow(
-                    label = "Automatisch synchronisieren",
-                    description = "Hintergrundaktualisierung aller Konten"
+                    label = "Auto-Sync",
+                    description = "Background refresh for all accounts"
                 ) {
                     Switch(
                         checked = state.isSyncEnabled,
@@ -230,7 +230,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Praktische Tipps (keine Systemsteuerung)
+        // Battery care tips
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
@@ -244,7 +244,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        "  Akku-Pflegetipps",
+                        "  Battery Care Tips",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.secondary
                     )
@@ -252,23 +252,23 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 BatteryTip(
                     icon = Icons.Filled.BatteryAlert,
-                    text = "Lade zwischen 20% und 80% — vermeide tägliche Vollladungen auf 100%"
+                    text = "Charge between 20% and 80% — avoid daily full charges to 100%"
                 )
                 BatteryTip(
                     icon = Icons.Filled.Thermostat,
-                    text = "Überhitzung über 40°C schadet dem Akku dauerhaft — Ladegerät bei Wärme trennen"
+                    text = "Overheating above 40°C permanently damages the battery — disconnect charger in heat"
                 )
                 BatteryTip(
                     icon = Icons.Filled.BrightnessAuto,
-                    text = "Adaptive Helligkeit aktivieren spart im Alltag bis zu 15% Strom"
+                    text = "Enabling adaptive brightness saves up to 15% in daily use"
                 )
                 BatteryTip(
                     icon = Icons.Filled.NetworkCheck,
-                    text = "WLAN statt Mobilfunk nutzen spart bis zu 30% im Vergleich zu 5G"
+                    text = "Using Wi-Fi instead of mobile data saves up to 30% compared to 5G"
                 )
                 BatteryTip(
                     icon = Icons.Filled.LockClock,
-                    text = "15-30s Bildschirm-Timeout einzustellen verlängert die Laufzeit spürbar"
+                    text = "Setting a 15–30s screen timeout noticeably extends battery life"
                 )
             }
         }
@@ -298,14 +298,14 @@ private fun OptimizeSectionHeader(
         when {
             hasPermission -> Icon(
                 Icons.Filled.Check,
-                contentDescription = "Berechtigung erteilt",
+                contentDescription = "Permission granted",
                 tint = BatteryGreen,
                 modifier = Modifier.size(16.dp)
             )
             onGrantPermission != null -> Button(
                 onClick = onGrantPermission,
                 modifier = Modifier.height(32.dp)
-            ) { Text("Berechtigung", style = MaterialTheme.typography.labelSmall) }
+            ) { Text("Grant", style = MaterialTheme.typography.labelSmall) }
             else -> Text(
                 "ADB",
                 style = MaterialTheme.typography.labelSmall,

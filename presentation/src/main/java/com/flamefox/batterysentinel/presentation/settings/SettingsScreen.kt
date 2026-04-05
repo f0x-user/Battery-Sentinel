@@ -66,39 +66,39 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Einstellungen", style = MaterialTheme.typography.headlineSmall)
+            Text("Settings", style = MaterialTheme.typography.headlineSmall)
             TextButton(onClick = { viewModel.showAbout() }) {
                 Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text(" Über", style = MaterialTheme.typography.labelMedium)
+                Text(" About", style = MaterialTheme.typography.labelMedium)
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Berechtigungsstatus
+        // Permission status
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Berechtigungen", style = MaterialTheme.typography.titleMedium)
+                Text("Permissions", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 PermissionRow(
-                    name = "Nutzungsstatistik",
-                    description = "App-Nutzungszeit im Vordergrund",
+                    name = "Usage Statistics",
+                    description = "App foreground usage time",
                     granted = state.hasUsageStatsPermission,
                     onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
                     grantType = "settings"
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Einstellungen schreiben",
-                    description = "Helligkeit & Screen-Timeout steuern",
+                    name = "Write Settings",
+                    description = "Control brightness & screen timeout",
                     granted = state.hasWriteSettingsPermission,
                     onGrant = { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)) },
                     grantType = "settings"
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Akkustatistik",
-                    description = "App-bezogener Akkuverbrauch (mAh)",
+                    name = "Battery Stats",
+                    description = "Per-app battery usage (mAh)",
                     granted = state.hasBatteryStatsPermission,
                     adbCommand = Constants.ADB_GRANT_BATTERY_STATS,
                     grantType = "adb",
@@ -109,8 +109,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 )
                 HorizontalDivider()
                 PermissionRow(
-                    name = "Sichere Einstellungen schreiben",
-                    description = "Energiesparmodus & Doze steuern",
+                    name = "Write Secure Settings",
+                    description = "Control battery saver & Doze",
                     granted = state.hasWriteSecureSettingsPermission,
                     adbCommand = Constants.ADB_GRANT_WRITE_SECURE,
                     grantType = "adb",
@@ -124,14 +124,14 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Schwellenwerte
+        // Alert thresholds
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Alarmschwellen", style = MaterialTheme.typography.titleMedium)
+                Text("Alert Thresholds", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Ladealarm: ${state.appSettings.chargeAlarmThreshold}%",
+                    "Charge Alert: ${state.appSettings.chargeAlarmThreshold}%",
                     style = MaterialTheme.typography.labelMedium
                 )
                 Slider(
@@ -144,7 +144,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    "Temperaturalarm: %.0f°C".format(state.appSettings.temperatureAlarmThresholdCelsius),
+                    "Temperature Alert: %.0f°C".format(state.appSettings.temperatureAlarmThresholdCelsius),
                     style = MaterialTheme.typography.labelMedium
                 )
                 Slider(
@@ -158,7 +158,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Benachrichtigungen
+        // Notifications
         Card(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -166,9 +166,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Benachrichtigungen")
+                    Text("Notifications")
                     Text(
-                        "Ladealarme, Temperaturwarnungen, Anomalien",
+                        "Charge alerts, temperature warnings, anomalies",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -183,31 +183,31 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Button(onClick = { viewModel.refreshPermissions() }, modifier = Modifier.fillMaxWidth()) {
-            Text("Berechtigungsstatus aktualisieren")
+            Text("Refresh Permission Status")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // System-Backups
+        // System backups
         SystemBackupCard(
             backups = state.allBackups,
             onRestore = { viewModel.restoreSystemBackup() }
         )
 
-        // Ergebnis-Dialog nach Wiederherstellung
+        // Restore result dialog
         state.restoreResult?.let { result ->
             AlertDialog(
                 onDismissRequest = { viewModel.clearRestoreResult() },
                 confirmButton = {
                     TextButton(onClick = { viewModel.clearRestoreResult() }) { Text("OK") }
                 },
-                title = { Text("Wiederherstellung") },
+                title = { Text("Restore") },
                 text = {
                     Text(
                         when (result) {
-                            RestoreResult.SUCCESS -> "Alle Einstellungen wurden erfolgreich wiederhergestellt."
-                            RestoreResult.PARTIAL -> "Einstellungen wurden teilweise wiederhergestellt. Einige Berechtigungen fehlen möglicherweise."
-                            RestoreResult.NO_BACKUP -> "Kein Backup vorhanden. Starte die App neu, um ein Backup zu erstellen."
+                            RestoreResult.SUCCESS -> "All settings were successfully restored."
+                            RestoreResult.PARTIAL -> "Settings were partially restored. Some permissions may be missing."
+                            RestoreResult.NO_BACKUP -> "No backup found. Restart the app to create a backup."
                         }
                     )
                 }
@@ -216,48 +216,48 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // DSGVO: Datenlöschung
-        DsgvoCard(
+        // GDPR: Data deletion
+        GdprCard(
             onClearData = { viewModel.clearAllData() }
         )
 
-        // About-Dialog
+        // About dialog
         if (state.showAbout) {
             AboutDialog(onDismiss = { viewModel.hideAbout() })
         }
 
-        // Datenlöschung Bestätigung
+        // Data deletion confirmation
         if (state.dataClearSuccess) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissDataClearSuccess() },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissDataClearSuccess() }) { Text("OK") }
                 },
-                title = { Text("Daten gelöscht") },
-                text = { Text("Alle lokal gespeicherten Batterie-Daten wurden erfolgreich gelöscht.") }
+                title = { Text("Data Deleted") },
+                text = { Text("All locally stored battery data has been successfully deleted.") }
             )
         }
     }
 }
 
 @Composable
-private fun DsgvoCard(onClearData: () -> Unit) {
+private fun GdprCard(onClearData: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Datenschutz (DSGVO)", style = MaterialTheme.typography.titleMedium)
+            Text("Privacy (GDPR)", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "BatterySentinel speichert ausschließlich lokale Gerätedaten (Akkuwerte, Ladesitzungen, " +
-                "Systemeinstellungen). Es werden keine Daten ins Internet übertragen und keine " +
-                "Drittanbieter-Dienste verwendet.",
+                "BatterySentinel stores only local device data (battery values, charging sessions, " +
+                "system settings). No data is transmitted to the internet and no third-party " +
+                "services are used.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Aufbewahrungsfristen: Akkuproben 14 Tage · Ladesitzungen 90 Tage",
+                "Retention: Battery samples 14 days · Charging sessions 90 days",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -267,7 +267,7 @@ private fun DsgvoCard(onClearData: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Alle Daten löschen (Art. 17 DSGVO)")
+                Text("Delete All Data (Art. 17 GDPR)")
             }
         }
     }
@@ -275,21 +275,21 @@ private fun DsgvoCard(onClearData: () -> Unit) {
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("Alle Daten löschen?") },
+            title = { Text("Delete All Data?") },
             text = {
                 Text(
-                    "Hiermit werden alle lokal gespeicherten Akkuproben, Ladesitzungen und " +
-                    "Sicherungsdaten unwiderruflich gelöscht. Die App-Einstellungen werden zurückgesetzt."
+                    "This will permanently delete all locally stored battery samples, charging sessions, " +
+                    "and backup data. App settings will be reset."
                 )
             },
             confirmButton = {
                 Button(
                     onClick = { showConfirm = false; onClearData() },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Löschen") }
+                ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
             }
         )
     }
@@ -302,49 +302,49 @@ private fun AboutDialog(onDismiss: () -> Unit) {
     if (showPrivacy) {
         AlertDialog(
             onDismissRequest = { showPrivacy = false },
-            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text("Schließen") } },
-            title = { Text("Datenschutzerklärung") },
+            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text("Close") } },
+            title = { Text("Privacy Policy") },
             text = {
                 Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("Stand: 01.04.2025", style = MaterialTheme.typography.labelSmall,
+                    Text("As of: 01.04.2025", style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("1. Verantwortlicher", style = MaterialTheme.typography.labelMedium)
+                    Text("1. Controller", style = MaterialTheme.typography.labelMedium)
                     Text("FlameFox · com.flamefox.batterysentinel", style = MaterialTheme.typography.bodySmall)
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("2. Erhobene Daten", style = MaterialTheme.typography.labelMedium)
+                    Text("2. Data Collected", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "Die App erhebt ausschließlich technische Gerätedaten des eigenen Smartphones: " +
-                        "Akkustand, Strom, Spannung, Temperatur, Ladesitzungen und App-Nutzungszeiten. " +
-                        "Es werden keine personenbezogenen Daten wie Name, E-Mail oder Standort erfasst.",
+                        "The app collects only technical device data from your own smartphone: " +
+                        "battery level, current, voltage, temperature, charging sessions, and app usage times. " +
+                        "No personal data such as name, email, or location is collected.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("3. Speicherung & Übertragung", style = MaterialTheme.typography.labelMedium)
+                    Text("3. Storage & Transfer", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "Alle Daten werden ausschließlich lokal auf dem Gerät gespeichert. Es findet " +
-                        "keine Übertragung an externe Server, Drittanbieter oder andere Dienste statt.",
+                        "All data is stored exclusively on the device. No data is transmitted to " +
+                        "external servers, third parties, or other services.",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("4. Aufbewahrungsfristen", style = MaterialTheme.typography.labelMedium)
+                    Text("4. Retention Periods", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "Akkuproben: 14 Tage · Ladesitzungen: 90 Tage · " +
-                        "Systemeinstellungs-Backups: bis zur manuellen Löschung (max. 5 Einträge)",
+                        "Battery samples: 14 days · Charging sessions: 90 days · " +
+                        "System setting backups: until manually deleted (max. 5 entries)",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("5. Betroffenenrechte (DSGVO Art. 15–22)", style = MaterialTheme.typography.labelMedium)
+                    Text("5. Data Subject Rights (GDPR Art. 15–22)", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "Da alle Daten lokal gespeichert sind, können Sie jederzeit über " +
-                        "Einstellungen → Alle Daten löschen alle erfassten Daten unwiderruflich löschen (Art. 17).",
+                        "Since all data is stored locally, you can permanently delete all collected " +
+                        "data at any time via Settings → Delete All Data (Art. 17).",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text("6. Rechtsgrundlage", style = MaterialTheme.typography.labelMedium)
+                    Text("6. Legal Basis", style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "Die Datenverarbeitung erfolgt auf Grundlage von Art. 6 Abs. 1 lit. a DSGVO " +
-                        "(Einwilligung durch Nutzung der App).",
+                        "Data processing is based on Art. 6(1)(a) GDPR " +
+                        "(consent through use of the app).",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -356,40 +356,40 @@ private fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Schließen") }
+            TextButton(onClick = onDismiss) { Text("Close") }
         },
         dismissButton = {
-            TextButton(onClick = { showPrivacy = true }) { Text("Datenschutz") }
+            TextButton(onClick = { showPrivacy = true }) { Text("Privacy") }
         },
-        title = { Text("Über BatterySentinel") },
+        title = { Text("About BatterySentinel") },
         text = {
             Column {
                 Text("Version $APP_VERSION", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Änderungen in dieser Version:", style = MaterialTheme.typography.labelMedium)
+                Text("Changes in this version:", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(6.dp))
                 ChangelogEntry("1.1.0", listOf(
-                    "Swipe-Navigation zwischen Tabs",
-                    "Ladezyklen korrekt anzeigen",
-                    "Charging: Neugestaltung mit aktivem Ladestatus, ETA und Statistiken",
-                    "Apps: Alle Einträge anklickbar (öffnet App-Einstellungen)",
-                    "Apps: Neue Ansicht 'Pro Zyklus'",
-                    "Settings: 5 rotierende System-Backups",
-                    "Benachrichtigungen öffnen die App beim Antippen",
-                    "Optimize: Überarbeitete Batterie-Tipps",
-                    "DSGVO: Datenlöschung + Datenschutzerklärung + 90-Tage-Retention"
+                    "Swipe navigation between tabs",
+                    "Charge cycles displayed correctly",
+                    "Charging: Redesign with active charging status, ETA, and statistics",
+                    "Apps: All entries clickable (opens app settings)",
+                    "Apps: New 'Per Cycle' view",
+                    "Settings: 5 rotating system backups",
+                    "Notifications open the app on tap",
+                    "Optimize: Revised battery tips",
+                    "GDPR: Data deletion + privacy policy + 90-day retention"
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.0.0", listOf(
-                    "Erstveröffentlichung",
-                    "Echtzeit-Akkuüberwachung",
-                    "Ladesitzungsverlauf",
-                    "App-Nutzungsstatistiken",
-                    "System-Backup & -Wiederherstellung"
+                    "Initial release",
+                    "Real-time battery monitoring",
+                    "Charging session history",
+                    "App usage statistics",
+                    "System backup & restore"
                 ))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Entwickelt von FlameFox · com.flamefox.batterysentinel",
+                    "Developed by FlameFox · com.flamefox.batterysentinel",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -412,7 +412,7 @@ private fun SystemBackupCard(
     onRestore: () -> Unit
 ) {
     var showConfirm by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault()) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -421,7 +421,7 @@ private fun SystemBackupCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("System-Backups", style = MaterialTheme.typography.titleMedium)
+                Text("System Backups", style = MaterialTheme.typography.titleMedium)
                 Text(
                     "${backups.size}/5",
                     style = MaterialTheme.typography.labelSmall,
@@ -430,7 +430,7 @@ private fun SystemBackupCard(
             }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Maximal 5 Backups werden gespeichert. Das älteste wird automatisch überschrieben.",
+                "Up to 5 backups are stored. The oldest is automatically overwritten.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -438,7 +438,7 @@ private fun SystemBackupCard(
 
             if (backups.isEmpty()) {
                 Text(
-                    "Noch kein Backup vorhanden. Das Backup wird beim nächsten App-Start automatisch angelegt.",
+                    "No backup yet. A backup will be created automatically on the next app start.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -460,7 +460,7 @@ private fun SystemBackupCard(
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
-                                    if (index == 0) "Neuestes Backup" else "Backup ${index + 1}",
+                                    if (index == 0) "Latest Backup" else "Backup ${index + 1}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (index == 0) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant
@@ -472,10 +472,10 @@ private fun SystemBackupCard(
                                 )
                             }
                             Text(
-                                "Helligkeit: ${backup.brightness}  |  " +
-                                "Adaptiv: ${if (backup.isAdaptiveBrightness) "Ein" else "Aus"}  |  " +
+                                "Brightness: ${backup.brightness}  |  " +
+                                "Adaptive: ${if (backup.isAdaptiveBrightness) "On" else "Off"}  |  " +
                                 "Timeout: ${backup.screenTimeoutMs / 1000}s  |  " +
-                                "Sparmodus: ${if (backup.isBatterySaverEnabled) "Ein" else "Aus"}",
+                                "Battery Saver: ${if (backup.isBatterySaverEnabled) "On" else "Off"}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -491,7 +491,7 @@ private fun SystemBackupCard(
                         containerColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Neuestes Backup wiederherstellen")
+                    Text("Restore Latest Backup")
                 }
             }
         }
@@ -500,11 +500,11 @@ private fun SystemBackupCard(
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("Backup wiederherstellen?") },
+            title = { Text("Restore Backup?") },
             text = {
                 Text(
-                    "Alle System-Einstellungen (Helligkeit, Screen-Timeout, Energiesparmodus, " +
-                    "Synchronisierung, Doze) werden auf den zuletzt gespeicherten Zustand zurückgesetzt."
+                    "All system settings (brightness, screen timeout, battery saver, " +
+                    "sync, Doze) will be reset to the last saved state."
                 )
             },
             confirmButton = {
@@ -516,10 +516,10 @@ private fun SystemBackupCard(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
-                ) { Text("Wiederherstellen") }
+                ) { Text("Restore") }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Abbrechen") }
+                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
             }
         )
     }
@@ -564,8 +564,8 @@ private fun PermissionRow(
             }
             if (!granted) {
                 when (grantType) {
-                    "settings" -> TextButton(onClick = { onGrant?.invoke() }) { Text("Erteilen") }
-                    "adb" -> TextButton(onClick = { onCopy?.invoke() }) { Text("ADB kopieren") }
+                    "settings" -> TextButton(onClick = { onGrant?.invoke() }) { Text("Grant") }
+                    "adb" -> TextButton(onClick = { onCopy?.invoke() }) { Text("Copy ADB") }
                 }
             }
         }

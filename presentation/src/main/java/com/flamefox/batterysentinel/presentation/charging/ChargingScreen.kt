@@ -59,7 +59,7 @@ fun ChargingScreen(viewModel: ChargingViewModel = hiltViewModel()) {
     ) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
 
-        // Aktiver Ladestatus
+        // Active charging status
         state.currentBattery?.let { battery ->
             if (battery.isCharging) {
                 item {
@@ -72,7 +72,7 @@ fun ChargingScreen(viewModel: ChargingViewModel = hiltViewModel()) {
             }
         }
 
-        // Akkugesundheit
+        // Battery health
         item {
             HealthCard(
                 healthPercent = state.averageHealthPercent,
@@ -80,18 +80,18 @@ fun ChargingScreen(viewModel: ChargingViewModel = hiltViewModel()) {
             )
         }
 
-        // Statistiken
+        // Statistics
         if (state.sessions.isNotEmpty()) {
             item { StatsCard(sessions = state.sessions) }
         }
 
-        // Health-Verlauf
+        // Health trend
         val healthSessions = state.sessions.filter { it.estimatedHealthPercent != null }
         if (healthSessions.size >= 2) {
             item { HealthTrendChart(sessions = healthSessions) }
         }
 
-        // Session-Verlauf
+        // Session history header
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -101,7 +101,7 @@ fun ChargingScreen(viewModel: ChargingViewModel = hiltViewModel()) {
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Ladeverlauf", style = MaterialTheme.typography.titleMedium)
+                Text("Charging History", style = MaterialTheme.typography.titleMedium)
             }
         }
 
@@ -110,7 +110,7 @@ fun ChargingScreen(viewModel: ChargingViewModel = hiltViewModel()) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Box(modifier = Modifier.padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Noch keine Ladesitzungen. Schließe dein Ladekabel an, um die Aufzeichnung zu starten.",
+                            "No charging sessions yet. Plug in your charger to start recording.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -134,7 +134,6 @@ private fun ActiveChargingCard(percentage: Int, currentMa: Int, voltageMv: Int) 
     }
     val remainingPercent = 100 - percentage
     val estimatedMinutes = if (currentMa > 0 && remainingPercent > 0) {
-        // Sehr grobe Schätzung: % / (mA/1000 * Faktor)
         val ratePerMinute = currentMa.toFloat() / 60_000f
         if (ratePerMinute > 0) (remainingPercent / ratePerMinute).toInt() else null
     } else null
@@ -153,7 +152,7 @@ private fun ActiveChargingCard(percentage: Int, currentMa: Int, voltageMv: Int) 
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    "Wird geladen",
+                    "Charging",
                     style = MaterialTheme.typography.titleMedium,
                     color = ChargingBlue
                 )
@@ -164,18 +163,18 @@ private fun ActiveChargingCard(percentage: Int, currentMa: Int, voltageMv: Int) 
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 ChargingInfoItem(
-                    label = "Ladestand",
+                    label = "Level",
                     value = "$percentage%",
                     icon = Icons.Filled.BatteryFull
                 )
                 ChargingInfoItem(
-                    label = "Leistung",
+                    label = "Power",
                     value = if (watt > 0) "%.1f W".format(watt) else "—",
                     icon = Icons.Filled.Speed
                 )
                 if (estimatedMinutes != null && estimatedMinutes > 0) {
                     ChargingInfoItem(
-                        label = "ETA (ca.)",
+                        label = "ETA (est.)",
                         value = "${estimatedMinutes}m",
                         icon = Icons.Filled.BatteryChargingFull
                     )
@@ -210,10 +209,10 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
         else -> BatteryRed
     }
     val statusText = when {
-        healthPercent == null -> "Keine Daten"
-        healthPercent >= 80f -> "Gut"
-        healthPercent >= 60f -> "Mittel"
-        else -> "Schlecht"
+        healthPercent == null -> "No Data"
+        healthPercent >= 80f -> "Good"
+        healthPercent >= 60f -> "Fair"
+        else -> "Poor"
     }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -225,12 +224,12 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
             ) {
                 Column {
                     Text(
-                        "Akkugesundheit",
+                        "Battery Health",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "$sessionCount abgeschlossene Ladesitzungen",
+                        "$sessionCount completed charging sessions",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -264,14 +263,14 @@ private fun HealthCard(healthPercent: Float?, sessionCount: Int) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Schätzung basiert auf Ladezyklen · Gerät: Pixel 8 Pro (5050 mAh)",
+                    "Estimate based on charge cycles · Device: Pixel 8 Pro (5050 mAh)",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Schließe eine vollständige Ladesitzung ab, um die Gesundheit zu schätzen.",
+                    "Complete a full charging session to estimate battery health.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -290,13 +289,13 @@ private fun StatsCard(sessions: List<ChargingSession>) {
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Statistiken", style = MaterialTheme.typography.titleSmall)
+            Text("Statistics", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatItem("Sitzungen", "${completed.size}")
-                StatItem("Ø Dauer", avgDurationMs?.toFormattedDuration() ?: "—")
-                StatItem("Ø mAh", avgMah?.let { "%.0f".format(it) } ?: "—")
-                StatItem("Ø Start→Ende", if (avgStartPct != null && avgEndPct != null) "$avgStartPct→$avgEndPct%" else "—")
+                StatItem("Sessions", "${completed.size}")
+                StatItem("Avg Duration", avgDurationMs?.toFormattedDuration() ?: "—")
+                StatItem("Avg mAh", avgMah?.let { "%.0f".format(it) } ?: "—")
+                StatItem("Avg Start→End", if (avgStartPct != null && avgEndPct != null) "$avgStartPct→$avgEndPct%" else "—")
             }
         }
     }
@@ -314,7 +313,7 @@ private fun StatItem(label: String, value: String) {
 private fun HealthTrendChart(sessions: List<ChargingSession>) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Gesundheitsverlauf (letzte ${minOf(sessions.size, 10)} Ladesitzungen)", style = MaterialTheme.typography.titleSmall)
+            Text("Health Trend (last ${minOf(sessions.size, 10)} sessions)", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
 
             val data = remember(sessions) {
@@ -367,7 +366,7 @@ private fun ChargingSessionCard(session: ChargingSession) {
                         color = durationColor
                     )
                 } else {
-                    Text("Läuft...", style = MaterialTheme.typography.labelMedium, color = BatteryGreen)
+                    Text("In Progress...", style = MaterialTheme.typography.labelMedium, color = BatteryGreen)
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
@@ -391,7 +390,7 @@ private fun ChargingSessionCard(session: ChargingSession) {
                 }
                 session.estimatedHealthPercent?.let {
                     Text(
-                        "Gesundheit: %.1f%%".format(it),
+                        "Health: %.1f%%".format(it),
                         style = MaterialTheme.typography.bodySmall,
                         color = healthColor ?: MaterialTheme.colorScheme.onSurface
                     )
