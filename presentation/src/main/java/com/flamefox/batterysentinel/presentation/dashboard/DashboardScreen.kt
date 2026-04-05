@@ -142,6 +142,38 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        val healthColor = when (battery.hardwareHealth.lowercase()) {
+            "good" -> BatteryGreen
+            "overheat", "cold" -> BatteryOrange
+            "dead", "over voltage", "overvoltage", "failure" -> BatteryRed
+            else -> MaterialTheme.colorScheme.onSurface
+        }
+        val capacityPct = if (battery.designCapacityMah > 0 && battery.maxCapacityMah > 0)
+            battery.maxCapacityMah.toFloat() / battery.designCapacityMah.toFloat() * 100f
+        else null
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            StatCard(
+                label = "Health Status",
+                value = battery.hardwareHealth.ifEmpty { "—" },
+                modifier = Modifier.weight(1f),
+                valueColor = if (battery.hardwareHealth.isNotEmpty()) healthColor
+                             else MaterialTheme.colorScheme.onSurface,
+                unit = capacityPct?.let { "%.1f%% capacity".format(it) } ?: ""
+            )
+            StatCard(
+                label = "Max Capacity",
+                value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
+                modifier = Modifier.weight(1f),
+                unit = if (battery.designCapacityMah > 0) "of ${battery.designCapacityMah} mAh" else ""
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

@@ -41,30 +41,56 @@ class BatteryManagerDataSource @Inject constructor(
         awaitClose { context.unregisterReceiver(receiver) }
     }
 
-    private fun readCycleCount(): Int {
-        // 1. BatteryManager.BATTERY_PROPERTY_CYCLE_COUNT (int = 9, public since API 34)
-        try {
-            val value = batteryManager.getIntProperty(9)
-            if (value > 0) return value
-        } catch (_: Exception) { }
-
-        // 2. Sysfs – geräteabhängig
-        val paths = listOf(
-            "/sys/class/power_supply/battery/cycle_count",
-            "/sys/class/power_supply/Battery/cycle_count",
-            "/sys/class/power_supply/bms/cycle_count"
-        )
+    private fun readSysfsInt(vararg paths: String): Int {
         for (path in paths) {
             try {
-                val file = java.io.File(path)
-                if (file.exists() && file.canRead()) {
-                    val v = file.readText().trim().toIntOrNull() ?: 0
-                    if (v > 0) return v
-                }
+                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat $path"))
+                val value = process.inputStream.bufferedReader().readLine()?.trim()?.toIntOrNull() ?: 0
+                process.destroy()
+                if (value > 0) return value
             } catch (_: Exception) { }
         }
-        return -1  // -1 = nicht verfügbar
+        return 0
     }
+
+    private fun readSysfsString(vararg paths: String): String {
+        for (path in paths) {
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "cat $path"))
+                val value = process.inputStream.bufferedReader().readLine()?.trim() ?: ""
+                process.destroy()
+                if (value.isNotEmpty()) return value
+            } catch (_: Exception) { }
+        }
+        return ""
+    }
+
+    private fun readCycleCount(): Int = readSysfsInt(
+        "/sys/class/power_supply/battery/cycle_count",
+        "/sys/class/power_supply/Battery/cycle_count",
+        "/sys/class/power_supply/bms/cycle_count"
+    )
+
+    private fun readMaxCapacityMah(): Int {
+        val uAh = readSysfsInt(
+            "/sys/class/power_supply/battery/charge_full",
+            "/sys/class/power_supply/Battery/charge_full"
+        )
+        return if (uAh > 0) uAh / 1000 else 0
+    }
+
+    private fun readDesignCapacityMah(): Int {
+        val uAh = readSysfsInt(
+            "/sys/class/power_supply/battery/charge_full_design",
+            "/sys/class/power_supply/Battery/charge_full_design"
+        )
+        return if (uAh > 0) uAh / 1000 else 0
+    }
+
+    private fun readHardwareHealth(): String = readSysfsString(
+        "/sys/class/power_supply/battery/health",
+        "/sys/class/power_supply/Battery/health"
+    )
 
     fun readCurrentState(): BatteryState {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -80,6 +106,9 @@ class BatteryManagerDataSource @Inject constructor(
         val tempCelsius = rawTemp / 10f
         val chargeCounter = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
         val cycleCount = readCycleCount()
+        val maxCapacityMah = readMaxCapacityMah()
+        val designCapacityMah = readDesignCapacityMah()
+        val hardwareHealth = readHardwareHealth()
         val rawStatus = intent?.getIntExtra(BatteryManager.EXTRA_STATUS, BatteryManager.BATTERY_STATUS_UNKNOWN)
         val rawPlugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0
 
@@ -109,7 +138,10 @@ class BatteryManagerDataSource @Inject constructor(
             chargeStatus = chargeStatus,
             pluggedType = pluggedType,
             chargeCounter = chargeCounter,
-            cycleCount = cycleCount
+            cycleCount = cycleCount,
+            maxCapacityMah = maxCapacityMah,
+            designCapacityMah = designCapacityMah,
+            hardwareHealth = hardwareHealth
         )
     }
 }

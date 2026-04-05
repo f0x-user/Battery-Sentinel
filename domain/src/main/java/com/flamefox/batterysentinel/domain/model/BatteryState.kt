@@ -10,6 +10,9 @@ data class BatteryState(
     val pluggedType: PluggedType,
     val chargeCounter: Int,
     val cycleCount: Int = 0,
+    val maxCapacityMah: Int = 0,
+    val designCapacityMah: Int = 0,
+    val hardwareHealth: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
 
