@@ -148,9 +148,6 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             "dead", "over voltage", "overvoltage", "failure" -> BatteryRed
             else -> MaterialTheme.colorScheme.onSurface
         }
-        val capacityPct = if (battery.designCapacityMah > 0 && battery.maxCapacityMah > 0)
-            battery.maxCapacityMah.toFloat() / battery.designCapacityMah.toFloat() * 100f
-        else null
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -161,14 +158,13 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 value = battery.hardwareHealth.ifEmpty { "—" },
                 modifier = Modifier.weight(1f),
                 valueColor = if (battery.hardwareHealth.isNotEmpty()) healthColor
-                             else MaterialTheme.colorScheme.onSurface,
-                unit = capacityPct?.let { "%.1f%% capacity".format(it) } ?: ""
+                             else MaterialTheme.colorScheme.onSurface
             )
             StatCard(
                 label = "Max Capacity",
                 value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
                 modifier = Modifier.weight(1f),
-                unit = if (battery.designCapacityMah > 0) "of ${battery.designCapacityMah} mAh" else ""
+                unit = if (battery.maxCapacityMah > 0) "est. from charge level" else ""
             )
         }
 
