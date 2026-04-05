@@ -48,33 +48,33 @@ private data class OnboardingStep(
 
 private val steps = listOf(
     OnboardingStep(
-        title = "Willkommen bei BatterySentinel",
-        description = "Überwache und optimiere deine Akku-Gesundheit.",
-        buttonLabel = "Los geht's",
+        title = "Welcome to BatterySentinel",
+        description = "Monitor and optimize your battery health.",
+        buttonLabel = "Get Started",
         icon = Icons.Filled.BatteryChargingFull
     ),
     OnboardingStep(
-        title = "Benachrichtigungen",
-        description = "Erlaube Benachrichtigungen für Ladealarme und Temperaturwarnungen.",
-        buttonLabel = "Berechtigung erteilen",
+        title = "Notifications",
+        description = "Allow notifications to receive charge alerts and temperature warnings.",
+        buttonLabel = "Grant Permission",
         icon = Icons.Filled.Notifications
     ),
     OnboardingStep(
-        title = "Akkuoptimierung",
-        description = "Schließe BatterySentinel von der Akkuoptimierung aus, damit der Hintergrunddienst zuverlässig läuft.",
-        buttonLabel = "Ausschließen",
+        title = "Battery Optimization",
+        description = "Exclude BatterySentinel from battery optimization so the background service runs reliably.",
+        buttonLabel = "Exclude App",
         icon = Icons.Filled.BatteryAlert
     ),
     OnboardingStep(
-        title = "Nutzungsstatistiken (optional)",
-        description = "Gewähre PACKAGE_USAGE_STATS, um die App-Vordergrundzeiten zu sehen.",
-        buttonLabel = "Zugriff gewähren",
+        title = "Usage Statistics (optional)",
+        description = "Grant PACKAGE_USAGE_STATS to see per-app foreground time in the Apps tab.",
+        buttonLabel = "Grant Access",
         icon = Icons.Filled.BarChart
     ),
     OnboardingStep(
-        title = "Einstellungen schreiben (optional)",
-        description = "Gewähre WRITE_SETTINGS, um Helligkeit und Bildschirm-Timeout direkt aus der App heraus zu steuern.",
-        buttonLabel = "Berechtigung gewähren",
+        title = "Write Settings (optional)",
+        description = "Grant WRITE_SETTINGS to control brightness and screen timeout directly from the app.",
+        buttonLabel = "Grant Permission",
         icon = Icons.Filled.Tune
     )
 )
@@ -104,7 +104,7 @@ fun OnboardingScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Schritt ${step + 1} / ${steps.size}",
+            text = "Step ${step + 1} / ${steps.size}",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.primary
         )
@@ -189,7 +189,7 @@ fun OnboardingScreen(
                         viewModel.nextStep()
                     }
                 }
-            ) { Text("Überspringen") }
+            ) { Text("Skip") }
         }
     }
 }

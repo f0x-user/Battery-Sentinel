@@ -114,85 +114,13 @@ jobs:
           body: |
             ## BatterySentinel v${{ steps.version.outputs.version }}
 
-            **Minimum requirement:** Android 14 (API 34) · Tested on Pixel 8 Pro (Android 16)
+            See the in-app changelog (Settings → About) for details.
 
-            ---
+            ### Requirements
+            - Android 14+ (API 34)
 
-            ### What the app does
-
-            BatterySentinel is a battery monitor for Android with real-time tracking, charge history, per-app usage statistics, and active battery optimization.
-
-            **Dashboard**
-            - Real-time display: charge level (%), current (mA), voltage (mV), temperature (°C)
-            - Drain rate (% per hour), hours until empty, charge cycle count
-            - Battery health estimate and hardware status
-
-            **Charging**
-            - Active charging status with power display (W) and estimated time to full (ETA)
-            - Charge history with health trend chart
-            - Statistics: average duration, mAh per session, health percentage
-
-            **Apps**
-            - App usage time sorted by foreground time
-            - Battery consumption per app (mAh)
-            - Per-cycle view: usage time per charging session
-
-            **Optimize**
-            - Display brightness (manual or adaptive), quick presets Low / Medium
-            - Screen timeout (15s to 10min)
-            - Battery saver mode and Doze status
-            - Background sync on / off
-            - Battery care tips (charge range, temperature, brightness, network, timeout)
-            - All settings are only applied after pressing the **Run** button
-
-            **Settings**
-            - Charge and temperature alert thresholds (configurable)
-            - Notifications on / off
-            - 5 rotating system backups (oldest overwritten automatically)
-            - Restore backup
-            - Data deletion (GDPR Art. 17), 90-day data retention
-            - About page with changelog and privacy policy
-
-            **Background**
-            - ForegroundService for continuous monitoring (1s interval)
-            - Room database for sessions and battery samples
-            - WorkManager for periodic anomaly detection
-            - Boot receiver: service starts automatically after device reboot
-            - Notifications open the app when tapped
-
-            ---
-
-            ### New in v${{ steps.version.outputs.version }}
-
-            - **Auto-update:** App checks for new GitHub releases on startup and offers direct download and installation with a progress bar
-            - **Optimize – Run button:** Settings are staged and only applied to the system after explicitly pressing Run; no system changes without pressing Run
-            - **Crash fix:** `BatteryManager.getIntProperty()` now catches `SecurityException` on Android 16 — battery percentage is read from Intent extras (no permission required); current, charge counter, and cycle count fall back to 0 gracefully when `BATTERY_STATS` is not granted
-            - **Version bump:** versionCode 2, versionName 1.1.1
-
-            ---
-
-            ### Changes since v1.0.0
-
-            - Swipe navigation between all five tabs
-            - Charge cycles read correctly from hardware APIs (no more SELinux spam)
-            - Charging tab: redesigned with active charging status, power display, and ETA
-            - Apps: all entries tappable (opens Android app settings)
-            - Apps: per-cycle view for session-based usage time
-            - Settings: About page with changelog and privacy policy
-            - GDPR: data deletion function and privacy policy
-            - APK signing switched to apksigner (PKCS12-compatible)
-            - GitHub Actions: Android SDK API 36 installed automatically
-            - Auto-update with download progress indicator
-            - Optimize: Run button for controlled application of settings
-            - Crash fix: SecurityException handling for BatteryManager on Android 16
-
-            ---
-
-            ### Installation
-
-            1. Download the APK
-            2. On the device: go to **Settings → Apps → Install unknown apps** and allow it
-            3. Open the APK and install
+            ### Install
+            Download `BatterySentinel.apk` and enable **Install from unknown sources** in Android settings.
           files: ${{ env.SIGNED_APK }}
           draft: false
           prerelease: false

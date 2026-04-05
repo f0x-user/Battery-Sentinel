@@ -106,18 +106,18 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     onClick = { context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Akku-Einstellungen öffnen")
+                    Text("Open Battery Settings")
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 OutlinedButton(
                     onClick = { context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS")) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Akku-Nutzung anzeigen")
+                    Text("Show Battery Usage")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Per-App Akkuverbrauch ist in den Android-Systemeinstellungen einsehbar.",
+                    "Per-app battery consumption is available in the Android system settings.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -371,9 +371,9 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 Text("Changes in this version:", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(6.dp))
                 ChangelogEntry("1.1.3", listOf(
-                    "Onboarding: icons, German texts, no device name",
-                    "Dashboard: Sessions-Kachel entfernt, Layout bereinigt",
-                    "Settings: ADB-Sektion entfernt, native Akku-Links"
+                    "Onboarding: step icons, localized texts, device name removed",
+                    "Dashboard: Sessions tile removed, duplicate Plugged tile fixed",
+                    "Settings: ADB section removed, native battery shortcut buttons added"
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.2", listOf(
