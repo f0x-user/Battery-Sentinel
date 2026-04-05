@@ -135,7 +135,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 label = "Charge Cycles",
                 value = if (battery.cycleCount > 0) "${battery.cycleCount}" else "—",
                 modifier = Modifier.weight(1f),
-                unit = if (battery.cycleCount <= 0) "hardware" else ""
+                unit = "hardware"
             )
         }
 
@@ -145,12 +145,6 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StatCard(
-                label = "Sessions (tracked)",
-                value = if (state.trackedSessionCount > 0) "${state.trackedSessionCount}" else "—",
-                modifier = Modifier.weight(1f),
-                unit = "since install"
-            )
             StatCard(
                 label = "Health Status",
                 value = battery.hardwareHealth.ifEmpty { "—" },
@@ -162,6 +156,12 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                     else -> MaterialTheme.colorScheme.onSurface
                 }
             )
+            StatCard(
+                label = "Max Capacity",
+                value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
+                modifier = Modifier.weight(1f),
+                unit = if (battery.maxCapacityMah > 0) "est." else ""
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -170,35 +170,16 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StatCard(
-                label = "Max Capacity",
-                value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
-                modifier = Modifier.weight(1f),
-                unit = if (battery.maxCapacityMah > 0) "est. from charge level" else ""
-            )
             StatCard(
                 label = "Plugged",
                 value = battery.pluggedType.name,
                 modifier = Modifier.weight(1f)
             )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
             StatCard(
                 label = "Drain Rate",
                 value = state.drainRate.percentPerHour.toPercentPerHourString(),
                 modifier = Modifier.weight(1f)
             )
-            StatCard(
-                label = "Screen-On Drain",
-                value = state.drainRate.screenOnPercentPerHour.toPercentPerHourString(),
-                modifier = Modifier.weight(1f)
-            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -208,13 +189,13 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             StatCard(
-                label = "Screen-Off Drain",
-                value = state.drainRate.screenOffPercentPerHour.toPercentPerHourString(),
+                label = "Screen-On Drain",
+                value = state.drainRate.screenOnPercentPerHour.toPercentPerHourString(),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                label = "Plugged",
-                value = battery.pluggedType.name,
+                label = "Screen-Off Drain",
+                value = state.drainRate.screenOffPercentPerHour.toPercentPerHourString(),
                 modifier = Modifier.weight(1f)
             )
         }

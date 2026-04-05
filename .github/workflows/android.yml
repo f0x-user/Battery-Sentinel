@@ -88,7 +88,7 @@ jobs:
           if [ -z "$UNSIGNED_APK" ]; then
             UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -1)
           fi
-          SIGNED_APK="${UNSIGNED_APK%-unsigned.apk}-signed.apk"
+          SIGNED_APK="BatterySentinel.apk"
           BUILD_TOOLS=$(ls "$ANDROID_HOME/build-tools/" | sort -V | tail -1)
           "$ANDROID_HOME/build-tools/$BUILD_TOOLS/apksigner" sign \
             --ks "${{ github.workspace }}/release.jks" \

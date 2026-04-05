@@ -14,8 +14,8 @@ android {
         applicationId = "com.flamefox.batterysentinel"
         minSdk = 34
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.2"
+        versionCode = 4
+        versionName = "1.1.3"
 
         testInstrumentationRunner = "com.flamefox.batterysentinel.HiltTestRunner"
     }

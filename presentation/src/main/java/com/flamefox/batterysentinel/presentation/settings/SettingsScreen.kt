@@ -1,8 +1,5 @@
 package com.flamefox.batterysentinel.presentation.settings
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +20,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -43,12 +41,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.flamefox.batterysentinel.core.common.Constants
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val APP_VERSION = "1.1.2"
+private const val APP_VERSION = "1.1.3"
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
@@ -95,18 +92,6 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     onGrant = { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS)) },
                     grantType = "settings"
                 )
-                HorizontalDivider()
-                PermissionRow(
-                    name = "Battery Stats",
-                    description = "Per-app battery usage (mAh) · Without ADB, app shows usage time instead of mAh",
-                    granted = state.hasBatteryStatsPermission,
-                    adbCommand = Constants.ADB_GRANT_BATTERY_STATS,
-                    grantType = "adb",
-                    onCopy = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        clipboard.setPrimaryClip(ClipData.newPlainText("adb", Constants.ADB_GRANT_BATTERY_STATS))
-                    }
-                )
             }
         }
 
@@ -117,20 +102,25 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Battery Quick Links", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        onClick = { context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Battery Settings", style = MaterialTheme.typography.labelSmall)
-                    }
-                    Button(
-                        onClick = { context.startActivity(Intent("android.intent.action.POWER_USAGE_SUMMARY")) },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Battery Usage", style = MaterialTheme.typography.labelSmall)
-                    }
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Akku-Einstellungen öffnen")
                 }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS")) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Akku-Nutzung anzeigen")
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Per-App Akkuverbrauch ist in den Android-Systemeinstellungen einsehbar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -380,6 +370,12 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Changes in this version:", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(6.dp))
+                ChangelogEntry("1.1.3", listOf(
+                    "Onboarding: icons, German texts, no device name",
+                    "Dashboard: Sessions-Kachel entfernt, Layout bereinigt",
+                    "Settings: ADB-Sektion entfernt, native Akku-Links"
+                ))
+                Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.2", listOf(
                     "Charge cycles from sysfs (no permissions needed)",
                     "Dashboard: Charge Cycles and Sessions now in separate tiles",
