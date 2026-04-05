@@ -14,3 +14,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Keystore & sensible Dateien – NIEMALS committen
+*.jks
+*.p12
+*.keystore
+Keyaufzeichnung.txt
