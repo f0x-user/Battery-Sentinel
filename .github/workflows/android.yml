@@ -51,6 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
     needs: build
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -112,24 +114,86 @@ jobs:
           body: |
             ## BatterySentinel v${{ steps.version.outputs.version }}
 
-            ### Änderungen
-            - Swipe-Navigation zwischen Dashboard, Charging, Apps, Optimize, Settings
-            - Ladezyklen korrekt aus Hardware/Sysfs auslesen
-            - Charging-Tab: Neugestaltung mit aktivem Ladestatus, Leistungsanzeige & ETA
-            - Apps: Alle Einträge anklickbar (öffnet Android App-Einstellungen)
-            - Apps: Neue "Pro Zyklus"-Ansicht für sitzungsbezogene Nutzungszeit
-            - Settings: 5 rotierende System-Backups (ältestes wird überschrieben)
-            - Settings: About-Seite mit Changelog und Datenschutzerklärung
-            - Benachrichtigungen öffnen die App beim Antippen
-            - Optimize: Überarbeitete Benutzeroberfläche mit Akku-Pflegetipps
-            - DSGVO: Datenlöschfunktion, Datenschutzerklärung, 90-Tage-Retention
+            **Mindestanforderung:** Android 14 (API 34) · Getestet auf Pixel 8 Pro (Android 16)
 
-            ### Installationshinweis
-            Die APK ist signiert und kann direkt installiert werden (Unbekannte Quellen aktivieren).
+            ---
+
+            ### Was die App macht
+
+            BatterySentinel ist ein Batterie-Monitor für Android mit Echtzeit-Überwachung, Ladehistorie, App-Nutzungsstatistiken und aktiver Akku-Optimierung.
+
+            **Dashboard**
+            - Echtzeit-Anzeige: Ladestand (%), Strom (mA), Spannung (mV), Temperatur (°C)
+            - Drain-Rate (% pro Stunde), Stunden bis leer, Ladezyklenanzahl
+            - Akku-Gesundheitsschätzung und Hardware-Status
+
+            **Charging**
+            - Aktiver Ladestatus mit Leistungsanzeige (W) und geschätzter Ladezeit (ETA)
+            - Ladehistorie mit Gesundheits-Trend-Chart
+            - Statistiken: Durchschnittsdauer, mAh je Session, Gesundheitsprozent
+
+            **Apps**
+            - App-Nutzungszeit nach Vordergrundzeit sortiert
+            - Batterieverbrauch pro App (mAh)
+            - "Pro Zyklus"-Ansicht: Nutzungszeit je Ladesession
+
+            **Optimize**
+            - Bildschirmhelligkeit (manuell oder adaptiv), Schnellvorwahl Low/Medium
+            - Bildschirmtimeout (15s bis 10min)
+            - Energiesparmodus und Doze-Status
+            - Hintergrund-Sync ein/aus
+            - Akku-Pflegetipps (Ladebereich, Temperatur, Helligkeit, Netzwerk, Timeout)
+            - **Alle Einstellungen werden erst nach Klick auf "Run" angewendet**
+
+            **Settings**
+            - Lade- und Temperaturalarm (konfigurierbare Schwellwerte)
+            - Benachrichtigungen ein/aus
+            - 5 rotierende System-Backups (ältestes wird automatisch überschrieben)
+            - Backup wiederherstellen
+            - Datenlöschung (DSGVO Art. 17), 90-Tage-Datenretention
+            - About-Seite mit Changelog und Datenschutzerklärung
+
+            **Hintergrund**
+            - ForegroundService für kontinuierliches Monitoring (1s Intervall)
+            - Room-Datenbank für Sessions und Batterie-Samples
+            - WorkManager für periodische Anomalie-Erkennung
+            - Boot-Receiver: Service startet automatisch nach Geräteneustart
+            - Benachrichtigungen öffnen die App beim Antippen
+
+            ---
+
+            ### Neu in v${{ steps.version.outputs.version }}
+
+            - **Auto-Update:** App prüft beim Start auf neue GitHub-Releases und bietet direkten Download und Installation an
+            - **Optimize – Run-Button:** Einstellungen werden erst nach explizitem Klick auf "Run" auf das System angewendet; ohne Run-Klick keine Systemänderungen
+            - **Versionierung:** versionCode 2, versionName 1.1.1
+
+            ---
+
+            ### Änderungen seit v1.0.0
+
+            - Swipe-Navigation zwischen allen fünf Tabs
+            - Ladezyklen korrekt aus Hardware-APIs ausgelesen (kein SELinux-Spam mehr)
+            - Charging-Tab: Neugestaltung mit aktivem Ladestatus, Leistungsanzeige und ETA
+            - Apps: Alle Einträge anklickbar (öffnet Android App-Einstellungen)
+            - Apps: "Pro Zyklus"-Ansicht für sitzungsbezogene Nutzungszeit
+            - Settings: About-Seite mit Changelog und Datenschutzerklärung
+            - DSGVO: Datenlöschfunktion und Datenschutzerklärung
+            - APK-Signing auf apksigner umgestellt (PKCS12-kompatibel)
+            - GitHub Actions: Android SDK API 36 wird automatisch installiert
+            - Auto-Update-Funktion mit Download-Fortschrittsanzeige
+            - Optimize: Run-Button für kontrollierte Anwendung von Einstellungen
+
+            ---
+
+            ### Installation
+
+            1. APK herunterladen
+            2. Auf dem Gerät: **Einstellungen → Apps → Unbekannte Quellen** aktivieren
+            3. APK öffnen und installieren
           files: ${{ env.SIGNED_APK }}
           draft: false
           prerelease: false
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
