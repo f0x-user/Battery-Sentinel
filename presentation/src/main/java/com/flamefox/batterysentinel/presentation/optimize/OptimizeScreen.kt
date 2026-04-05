@@ -20,16 +20,19 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LockClock
 import androidx.compose.material.icons.filled.NetworkCheck
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Power
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -67,10 +70,68 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
         Text("Optimize Battery", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "Adjust system settings directly to extend battery life.",
+            "Configure settings below, then press Run to apply them.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Run button
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (state.hasPendingChanges)
+                    MaterialTheme.colorScheme.primaryContainer
+                else
+                    MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Apply Optimizations",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (state.hasPendingChanges)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        if (state.hasPendingChanges)
+                            "Pending changes — press Run to apply."
+                        else
+                            "No pending changes.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (state.hasPendingChanges)
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (state.isApplying) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp), strokeWidth = 3.dp)
+                } else {
+                    FilledTonalButton(
+                        onClick = viewModel::runOptimizations,
+                        enabled = state.hasPendingChanges
+                    ) {
+                        Icon(
+                            Icons.Filled.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text("  Run", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
         // Display brightness
@@ -89,20 +150,20 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
                 OptimizeRow(label = "Adaptive Brightness", description = "Automatically adjust brightness") {
                     Switch(
-                        checked = state.isAdaptiveBrightness,
+                        checked = state.pendingIsAdaptiveBrightness,
                         onCheckedChange = viewModel::setAdaptiveBrightness,
                         enabled = state.hasWriteSettingsPermission
                     )
                 }
 
-                if (!state.isAdaptiveBrightness) {
+                if (!state.pendingIsAdaptiveBrightness) {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Brightness: ${state.brightness} / 255",
+                        "Brightness: ${state.pendingBrightness} / 255",
                         style = MaterialTheme.typography.labelSmall
                     )
                     Slider(
-                        value = state.brightness.toFloat(),
+                        value = state.pendingBrightness.toFloat(),
                         onValueChange = { viewModel.setBrightness(it.toInt()) },
                         valueRange = 0f..255f,
                         enabled = state.hasWriteSettingsPermission
@@ -139,7 +200,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 val timeoutLabels = listOf("15s", "30s", "1m", "2m", "5m", "10m")
                 var expanded by remember { mutableStateOf(false) }
                 val selectedLabel = timeoutLabels[
-                    timeoutOptions.indexOfFirst { it == state.screenTimeout }.coerceAtLeast(0)
+                    timeoutOptions.indexOfFirst { it == state.pendingScreenTimeout }.coerceAtLeast(0)
                 ]
 
                 ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
@@ -187,7 +248,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                     description = "Reduces performance and background activity"
                 ) {
                     Switch(
-                        checked = state.isBatterySaverEnabled,
+                        checked = state.pendingIsBatterySaverEnabled,
                         onCheckedChange = { viewModel.toggleBatterySaver() },
                         enabled = state.hasWriteSecureSettingsPermission
                     )
@@ -221,7 +282,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                     description = "Background refresh for all accounts"
                 ) {
                     Switch(
-                        checked = state.isSyncEnabled,
+                        checked = state.pendingIsSyncEnabled,
                         onCheckedChange = { viewModel.setSync(it) }
                     )
                 }

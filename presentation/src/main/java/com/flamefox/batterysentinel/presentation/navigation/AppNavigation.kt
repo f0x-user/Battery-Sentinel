@@ -29,6 +29,7 @@ import com.flamefox.batterysentinel.presentation.dashboard.DashboardScreen
 import com.flamefox.batterysentinel.presentation.onboarding.OnboardingScreen
 import com.flamefox.batterysentinel.presentation.optimize.OptimizeScreen
 import com.flamefox.batterysentinel.presentation.settings.SettingsScreen
+import com.flamefox.batterysentinel.presentation.update.UpdateDialog
 import kotlinx.coroutines.launch
 
 private data class TabItem(val label: String, val icon: ImageVector)
@@ -93,5 +94,8 @@ private fun MainTabsScreen() {
                 4 -> SettingsScreen()
             }
         }
+
+        // Update dialog — shown as overlay when a new version is available
+        UpdateDialog()
     }
 }

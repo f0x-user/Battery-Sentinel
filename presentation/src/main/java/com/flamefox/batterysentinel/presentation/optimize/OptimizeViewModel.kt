@@ -9,10 +9,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class OptimizeUiState(
+    // Current system state (what is actually active on the device)
     val brightness: Int = 127,
     val screenTimeout: Int = 30000,
     val isAdaptiveBrightness: Boolean = false,
@@ -20,7 +22,16 @@ data class OptimizeUiState(
     val isSyncEnabled: Boolean = true,
     val dozeStatus: String = "default",
     val hasWriteSettingsPermission: Boolean = false,
-    val hasWriteSecureSettingsPermission: Boolean = false
+    val hasWriteSecureSettingsPermission: Boolean = false,
+    // Pending state (what the user has configured but not yet applied)
+    val pendingBrightness: Int = 127,
+    val pendingScreenTimeout: Int = 30000,
+    val pendingIsAdaptiveBrightness: Boolean = false,
+    val pendingIsBatterySaverEnabled: Boolean = false,
+    val pendingIsSyncEnabled: Boolean = true,
+    // Run button state
+    val hasPendingChanges: Boolean = false,
+    val isApplying: Boolean = false
 )
 
 @HiltViewModel
@@ -36,54 +47,100 @@ class OptimizeViewModel @Inject constructor(
     init { refreshState() }
 
     fun refreshState() {
+        val brightness = controlBrightnessUseCase.getCurrentBrightness()
+        val timeout = controlBrightnessUseCase.getScreenTimeout()
+        val adaptive = controlBrightnessUseCase.isAdaptiveBrightnessEnabled()
+        val batterySaver = toggleBatterySaverUseCase.isEnabled()
+        val sync = settingsRepository.isSyncEnabled()
+
         _uiState.value = OptimizeUiState(
-            brightness = controlBrightnessUseCase.getCurrentBrightness(),
-            screenTimeout = controlBrightnessUseCase.getScreenTimeout(),
-            isAdaptiveBrightness = controlBrightnessUseCase.isAdaptiveBrightnessEnabled(),
-            isBatterySaverEnabled = toggleBatterySaverUseCase.isEnabled(),
-            isSyncEnabled = settingsRepository.isSyncEnabled(),
+            brightness = brightness,
+            screenTimeout = timeout,
+            isAdaptiveBrightness = adaptive,
+            isBatterySaverEnabled = batterySaver,
+            isSyncEnabled = sync,
             dozeStatus = toggleBatterySaverUseCase.getDozeStatus(),
             hasWriteSettingsPermission = controlBrightnessUseCase.hasPermission(),
-            hasWriteSecureSettingsPermission = toggleBatterySaverUseCase.hasPermission()
+            hasWriteSecureSettingsPermission = toggleBatterySaverUseCase.hasPermission(),
+            // Pending starts equal to current — no changes pending
+            pendingBrightness = brightness,
+            pendingScreenTimeout = timeout,
+            pendingIsAdaptiveBrightness = adaptive,
+            pendingIsBatterySaverEnabled = batterySaver,
+            pendingIsSyncEnabled = sync,
+            hasPendingChanges = false,
+            isApplying = false
         )
     }
 
     fun setBrightness(value: Int) {
-        viewModelScope.launch {
-            controlBrightnessUseCase.setBrightness(value)
-            _uiState.value = _uiState.value.copy(brightness = value)
+        _uiState.update { state ->
+            state.copy(
+                pendingBrightness = value,
+                hasPendingChanges = true
+            )
         }
     }
 
     fun setAdaptiveBrightness(enabled: Boolean) {
-        viewModelScope.launch {
-            controlBrightnessUseCase.setAdaptiveBrightness(enabled)
-            _uiState.value = _uiState.value.copy(isAdaptiveBrightness = enabled)
+        _uiState.update { state ->
+            state.copy(
+                pendingIsAdaptiveBrightness = enabled,
+                hasPendingChanges = true
+            )
         }
     }
 
     fun setScreenTimeout(ms: Int) {
-        viewModelScope.launch {
-            controlBrightnessUseCase.setScreenTimeout(ms)
-            _uiState.value = _uiState.value.copy(screenTimeout = ms)
+        _uiState.update { state ->
+            state.copy(
+                pendingScreenTimeout = ms,
+                hasPendingChanges = true
+            )
         }
     }
 
     fun toggleBatterySaver() {
-        viewModelScope.launch {
-            val success = toggleBatterySaverUseCase.toggle()
-            if (success) {
-                _uiState.value = _uiState.value.copy(
-                    isBatterySaverEnabled = !_uiState.value.isBatterySaverEnabled
-                )
-            }
+        _uiState.update { state ->
+            state.copy(
+                pendingIsBatterySaverEnabled = !state.pendingIsBatterySaverEnabled,
+                hasPendingChanges = true
+            )
         }
     }
 
     fun setSync(enabled: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                pendingIsSyncEnabled = enabled,
+                hasPendingChanges = true
+            )
+        }
+    }
+
+    fun runOptimizations() {
         viewModelScope.launch {
-            settingsRepository.setSync(enabled)
-            _uiState.value = _uiState.value.copy(isSyncEnabled = enabled)
+            _uiState.update { it.copy(isApplying = true) }
+            val s = _uiState.value
+
+            if (s.hasWriteSettingsPermission) {
+                controlBrightnessUseCase.setAdaptiveBrightness(s.pendingIsAdaptiveBrightness)
+                if (!s.pendingIsAdaptiveBrightness) {
+                    controlBrightnessUseCase.setBrightness(s.pendingBrightness)
+                }
+                controlBrightnessUseCase.setScreenTimeout(s.pendingScreenTimeout)
+            }
+
+            if (s.hasWriteSecureSettingsPermission) {
+                val currentlySaving = toggleBatterySaverUseCase.isEnabled()
+                if (currentlySaving != s.pendingIsBatterySaverEnabled) {
+                    toggleBatterySaverUseCase.toggle()
+                }
+            }
+
+            settingsRepository.setSync(s.pendingIsSyncEnabled)
+
+            refreshState()
         }
     }
 }
