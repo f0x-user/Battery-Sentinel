@@ -101,6 +101,20 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun restoreBackup(index: Int) {
+        viewModelScope.launch {
+            val backups = _uiState.value.allBackups
+            if (index < 0 || index >= backups.size) {
+                _uiState.value = _uiState.value.copy(restoreResult = RestoreResult.NO_BACKUP)
+                return@launch
+            }
+            val allOk = settingsRepository.restoreSystemBackupByBackup(backups[index])
+            _uiState.value = _uiState.value.copy(
+                restoreResult = if (allOk) RestoreResult.SUCCESS else RestoreResult.PARTIAL
+            )
+        }
+    }
+
     fun clearRestoreResult() {
         _uiState.value = _uiState.value.copy(restoreResult = null)
     }

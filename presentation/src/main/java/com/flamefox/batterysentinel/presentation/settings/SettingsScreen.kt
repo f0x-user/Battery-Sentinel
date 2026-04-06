@@ -1,7 +1,10 @@
 package com.flamefox.batterysentinel.presentation.settings
 
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +29,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -33,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -102,15 +107,33 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Battery Quick Links", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
+                // FIX 4.1: Android allgemeiner Akku-Screen (mit Fallback)
                 OutlinedButton(
-                    onClick = { context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS)) },
+                    onClick = {
+                        try {
+                            context.startActivity(Intent("android.intent.action.POWER_USAGE_SUMMARY"))
+                        } catch (_: ActivityNotFoundException) {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+                            } catch (_: Exception) {}
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Open Battery Settings")
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                // FIX 4.2: try-catch um Absturz zu verhindern
                 OutlinedButton(
-                    onClick = { context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS")) },
+                    onClick = {
+                        try {
+                            context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS"))
+                        } catch (_: ActivityNotFoundException) {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                            } catch (_: Exception) {}
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Show Battery Usage")
@@ -190,10 +213,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // System backups
+        // FIX 4.3: System backups mit auswählbarem Restore
         SystemBackupCard(
             backups = state.allBackups,
-            onRestore = { viewModel.restoreSystemBackup() }
+            onRestore = { index -> viewModel.restoreBackup(index) }
         )
 
         // Restore result dialog
@@ -218,10 +241,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // GDPR: Data deletion
-        GdprCard(
-            onClearData = { viewModel.clearAllData() }
-        )
+        // FIX 4.4: Nur noch Delete-Button, kein Privacy (GDPR) Titel/Text
+        DataDeletionCard(onClearData = { viewModel.clearAllData() })
 
         // About dialog
         if (state.showAbout) {
@@ -242,25 +263,16 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     }
 }
 
+// FIX 4.4: Umbenannt, kein Privacy-Header mehr
 @Composable
-private fun GdprCard(onClearData: () -> Unit) {
+private fun DataDeletionCard(onClearData: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Privacy (GDPR)", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "BatterySentinel stores only local device data (battery values, charging sessions, " +
-                "system settings). No data is transmitted to the internet and no third-party " +
-                "services are used.",
+                "Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "Retention: Battery samples 14 days · Charging sessions 90 days",
-                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
@@ -299,73 +311,14 @@ private fun GdprCard(onClearData: () -> Unit) {
 
 @Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
-    var showPrivacy by remember { mutableStateOf(false) }
-
-    if (showPrivacy) {
-        AlertDialog(
-            onDismissRequest = { showPrivacy = false },
-            confirmButton = { TextButton(onClick = { showPrivacy = false }) { Text("Close") } },
-            title = { Text("Privacy Policy") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("As of: 01.04.2025", style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("1. Controller", style = MaterialTheme.typography.labelMedium)
-                    Text("FlameFox · com.flamefox.batterysentinel", style = MaterialTheme.typography.bodySmall)
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("2. Data Collected", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        "The app collects only technical device data from your own smartphone: " +
-                        "battery level, current, voltage, temperature, charging sessions, and app usage times. " +
-                        "No personal data such as name, email, or location is collected.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("3. Storage & Transfer", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        "All data is stored exclusively on the device. No data is transmitted to " +
-                        "external servers, third parties, or other services.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("4. Retention Periods", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        "Battery samples: 14 days · Charging sessions: 90 days · " +
-                        "System setting backups: until manually deleted (max. 5 entries)",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("5. Data Subject Rights (GDPR Art. 15–22)", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        "Since all data is stored locally, you can permanently delete all collected " +
-                        "data at any time via Settings → Delete All Data (Art. 17).",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text("6. Legal Basis", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        "Data processing is based on Art. 6(1)(a) GDPR " +
-                        "(consent through use of the app).",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        )
-        return
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Close") }
         },
-        dismissButton = {
-            TextButton(onClick = { showPrivacy = true }) { Text("Privacy") }
-        },
         title = { Text("About BatterySentinel") },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text("Version $APP_VERSION", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Changes in this version:", style = MaterialTheme.typography.labelMedium)
@@ -405,6 +358,12 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 ))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
+                    "Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
                     "Developed by FlameFox · com.flamefox.batterysentinel",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -422,13 +381,15 @@ private fun ChangelogEntry(version: String, entries: List<String>) {
     }
 }
 
+// FIX 4.3: Auswählbares Backup-Restore mit RadioButton
 @Composable
 private fun SystemBackupCard(
     backups: List<com.flamefox.batterysentinel.domain.model.SystemBackup>,
-    onRestore: () -> Unit
+    onRestore: (Int) -> Unit
 ) {
+    var selectedBackupIndex by remember { mutableIntStateOf(-1) }
     var showConfirm by remember { mutableStateOf(false) }
-    val dateFormat = remember { SimpleDateFormat("MM/dd/yyyy HH:mm", Locale.getDefault()) }
+    val dateFormat = remember { SimpleDateFormat("dd.MM.yyyy, HH:mm", Locale.getDefault()) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -460,41 +421,40 @@ private fun SystemBackupCard(
                 )
             } else {
                 backups.forEachIndexed { index, backup ->
-                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    val isSelected = selectedBackupIndex == index
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (index == 0)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { selectedBackupIndex = index },
+                        border = if (isSelected)
+                            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                        else null
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { selectedBackupIndex = index }
+                            )
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
                                 Text(
                                     if (index == 0) "Latest Backup" else "Backup ${index + 1}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (index == 0) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
                                     dateFormat.format(Date(backup.savedAt)),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    "Helligkeit: ${backup.brightness} · Timeout: ${backup.screenTimeoutMs / 1000}s",
+                                    style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Text(
-                                "Brightness: ${backup.brightness}  |  " +
-                                "Adaptive: ${if (backup.isAdaptiveBrightness) "On" else "Off"}  |  " +
-                                "Timeout: ${backup.screenTimeoutMs / 1000}s  |  " +
-                                "Battery Saver: ${if (backup.isBatterySaverEnabled) "On" else "Off"}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
                         }
                     }
                 }
@@ -503,35 +463,33 @@ private fun SystemBackupCard(
                 Button(
                     onClick = { showConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = selectedBackupIndex >= 0,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text("Restore Latest Backup")
+                    Text("Backup wiederherstellen")
                 }
             }
         }
     }
 
-    if (showConfirm) {
+    if (showConfirm && selectedBackupIndex >= 0) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
             title = { Text("Restore Backup?") },
             text = {
                 Text(
                     "All system settings (brightness, screen timeout, battery saver, " +
-                    "sync, Doze) will be reset to the last saved state."
+                    "sync, Doze) will be reset to the selected backup state."
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
                         showConfirm = false
-                        onRestore()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
+                        onRestore(selectedBackupIndex)
+                    }
                 ) { Text("Restore") }
             },
             dismissButton = {

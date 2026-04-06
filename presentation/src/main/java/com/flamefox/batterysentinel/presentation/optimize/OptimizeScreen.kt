@@ -259,24 +259,49 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text("Battery Optimizations", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (state.isIgnoringBatteryOptimizations) "Unrestricted (ignoring optimizations)"
-                            else "Optimized by Android",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (state.isIgnoringBatteryOptimizations) BatteryOrange
-                            else BatteryGreen
-                        )
                     }
                     OutlinedButton(
                         onClick = {
-                            val uri = Uri.parse("package:${context.packageName}")
-                            context.startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, uri))
+                            val intent = if (state.isIgnoringBatteryOptimizations) {
+                                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                            } else {
+                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                                    data = Uri.parse("package:${context.packageName}")
+                                }
+                            }
+                            context.startActivity(intent)
                         },
                         modifier = Modifier.height(36.dp)
                     ) {
                         Text("Configure →", style = MaterialTheme.typography.labelSmall)
                     }
                 }
+                AssistChip(
+                    onClick = {},
+                    label = {
+                        Text(
+                            if (state.isIgnoringBatteryOptimizations) "Optimierungen deaktiviert"
+                            else "Optimierungen aktiv — Tippen zum Deaktivieren",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (state.isIgnoringBatteryOptimizations) Icons.Filled.Check
+                            else Icons.Filled.BatteryAlert,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = if (state.isIgnoringBatteryOptimizations)
+                            BatteryGreen.copy(alpha = 0.2f)
+                        else
+                            BatteryOrange.copy(alpha = 0.2f),
+                        labelColor = if (state.isIgnoringBatteryOptimizations) BatteryGreen
+                        else BatteryOrange
+                    )
+                )
             }
         }
 

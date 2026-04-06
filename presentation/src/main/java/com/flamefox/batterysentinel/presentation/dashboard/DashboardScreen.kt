@@ -182,22 +182,5 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            StatCard(
-                label = "Screen-On Drain",
-                value = state.drainRate.screenOnPercentPerHour.toPercentPerHourString(),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                label = "Screen-Off Drain",
-                value = state.drainRate.screenOffPercentPerHour.toPercentPerHourString(),
-                modifier = Modifier.weight(1f)
-            )
-        }
     }
 }

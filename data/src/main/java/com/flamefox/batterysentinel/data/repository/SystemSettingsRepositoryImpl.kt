@@ -56,16 +56,19 @@ class SystemSettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun restoreSystemBackup(): Boolean {
-        var allOk = true
         val b = backupStore.backup.first() ?: return false
+        return restoreSystemBackupByBackup(b)
+    }
 
-        if (!dataSource.setAdaptiveBrightness(b.isAdaptiveBrightness)) allOk = false
-        if (!dataSource.setBrightness(b.brightness)) allOk = false
-        if (!dataSource.setScreenTimeout(b.screenTimeoutMs)) allOk = false
-        if (!dataSource.setBatterySaver(b.isBatterySaverEnabled)) allOk = false
-        dataSource.setSync(b.isSyncEnabled)
-        if (b.dozeConstants != "default" && b.dozeConstants != "unknown") {
-            if (!dataSource.setDozeConstants(b.dozeConstants)) allOk = false
+    override suspend fun restoreSystemBackupByBackup(backup: SystemBackup): Boolean {
+        var allOk = true
+        if (!dataSource.setAdaptiveBrightness(backup.isAdaptiveBrightness)) allOk = false
+        if (!dataSource.setBrightness(backup.brightness)) allOk = false
+        if (!dataSource.setScreenTimeout(backup.screenTimeoutMs)) allOk = false
+        if (!dataSource.setBatterySaver(backup.isBatterySaverEnabled)) allOk = false
+        dataSource.setSync(backup.isSyncEnabled)
+        if (backup.dozeConstants != "default" && backup.dozeConstants != "unknown") {
+            if (!dataSource.setDozeConstants(backup.dozeConstants)) allOk = false
         }
         return allOk
     }

@@ -60,7 +60,7 @@ class BatteryManagerDataSource @Inject constructor(
             if (sysfsValue != null && sysfsValue > 0) return sysfsValue
         } catch (_: Exception) {}
         return try {
-            batteryManager.getIntProperty(9 /* BATTERY_PROPERTY_CYCLE_COUNT */)
+            batteryManager.getIntProperty(9 /* BATTERY_PROPERTY_CYCLE_COUNT, hidden API */)
                 .takeIf { it > 0 } ?: -1
         } catch (_: SecurityException) { -1 }
     }

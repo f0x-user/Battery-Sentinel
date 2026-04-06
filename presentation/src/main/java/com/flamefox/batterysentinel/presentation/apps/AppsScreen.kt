@@ -13,19 +13,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.BatteryUnknown
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -38,11 +40,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flamefox.batterysentinel.core.common.toFormattedDateTime
 import com.flamefox.batterysentinel.core.common.toFormattedDuration
-import com.flamefox.batterysentinel.domain.model.AppUsage
 import com.flamefox.batterysentinel.domain.model.ChargingSession
 
 @Composable
@@ -85,8 +88,9 @@ private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
 
     val maxTime = state.appUsage.maxOfOrNull { it.foregroundTimeMs } ?: 1L
 
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(state.appUsage) { app ->
+    LazyColumn {
+        itemsIndexed(state.appUsage) { index, app ->
+            if (index > 0) HorizontalDivider()
             AppUsageRow(
                 appName = app.appName,
                 packageName = app.packageName,
@@ -101,28 +105,48 @@ private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
 @Composable
 private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
-    if (!state.hasBatteryStatsPermission) {
+    if (!state.hasUsageStatsPermission) {
         PermissionPrompt(
-            title = "BATTERY_STATS Permission Required",
-            description = "Grant via ADB:\nadb shell pm grant com.flamefox.batterysentinel android.permission.BATTERY_STATS",
-            onGrant = null,
-            onRefresh = viewModel::refresh,
-            isAdb = true
+            title = "Usage Statistics Permission Required",
+            description = "Grant PACKAGE_USAGE_STATS to display app usage time.",
+            onGrant = { context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) },
+            onRefresh = viewModel::refresh
         )
         return
     }
 
-    val maxMah = state.perAppBattery.maxOfOrNull { it.batteryMah ?: 0f } ?: 1f
+    val maxTime = state.appUsage.maxOfOrNull { it.foregroundTimeMs } ?: 1L
 
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(state.perAppBattery) { app ->
+    LazyColumn {
+        itemsIndexed(state.appUsage) { index, app ->
+            if (index > 0) HorizontalDivider()
             AppUsageRow(
                 appName = app.appName,
                 packageName = app.packageName,
-                value = "%.2f mAh".format(app.batteryMah ?: 0f),
-                progress = (app.batteryMah ?: 0f) / maxMah,
+                value = app.foregroundTimeMs.toFormattedDuration(),
+                progress = app.foregroundTimeMs / maxTime.toFloat(),
                 onClick = { openAppSettings(context, app.packageName) }
             )
+        }
+        item {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Detaillierter Akkuverbrauch pro App ist in den Android-Einstellungen einsehbar.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    try {
+                        context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS"))
+                    } catch (_: Exception) {}
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("System-Akkuverbrauch öffnen")
+            }
         }
     }
 }
@@ -142,14 +166,25 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
     }
 
     if (state.sessions.isEmpty()) {
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    "No completed charging sessions available.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.AutoMirrored.Filled.BatteryUnknown,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                "Noch keine abgeschlossenen Ladesitzungen aufgezeichnet.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
         }
         return
     }
@@ -166,7 +201,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }
-            items(state.sessions) { session ->
+            itemsIndexed(state.sessions) { _, session ->
                 SessionPickerCard(session = session, onClick = { viewModel.selectSession(session) })
             }
         }
@@ -201,8 +236,9 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
                 )
             } else {
                 val maxTime = state.sessionApps.maxOfOrNull { it.foregroundTimeMs } ?: 1L
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(state.sessionApps) { app ->
+                LazyColumn {
+                    itemsIndexed(state.sessionApps) { index, app ->
+                        if (index > 0) HorizontalDivider()
                         AppUsageRow(
                             appName = app.appName,
                             packageName = app.packageName,
@@ -219,7 +255,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
 
 @Composable
 private fun SessionPickerCard(session: ChargingSession, onClick: () -> Unit) {
-    Card(
+    androidx.compose.material3.Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
@@ -255,42 +291,29 @@ private fun AppUsageRow(
     progress: Float,
     onClick: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(appName, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        packageName,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(value, style = MaterialTheme.typography.labelMedium)
-                    Spacer(modifier = Modifier.size(4.dp))
-                    Icon(
-                        Icons.Filled.ChevronRight,
-                        contentDescription = "Open app details",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(4.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(appName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                color = MaterialTheme.colorScheme.primary
             )
         }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -302,7 +325,7 @@ private fun PermissionPrompt(
     onRefresh: () -> Unit,
     isAdb: Boolean = false
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    androidx.compose.material3.Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
