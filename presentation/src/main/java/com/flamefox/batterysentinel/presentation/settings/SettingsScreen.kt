@@ -50,7 +50,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val APP_VERSION = "1.1.4"
+private const val APP_VERSION = "1.1.5"
 
 /**
  * Settings screen — configuration hub for permissions, alert thresholds, notifications,

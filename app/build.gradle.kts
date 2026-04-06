@@ -15,7 +15,7 @@ android {
         minSdk = 34
         targetSdk = 36
         versionCode = 5
-        versionName = "1.1.4"
+        versionName = "1.1.5"
 
         testInstrumentationRunner = "com.flamefox.batterysentinel.HiltTestRunner"
     }
