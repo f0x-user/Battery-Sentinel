@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.BatteryManager
+import android.os.Build
 import com.flamefox.batterysentinel.domain.model.BatteryState
 import com.flamefox.batterysentinel.domain.model.ChargeStatus
 import com.flamefox.batterysentinel.domain.model.PluggedType
@@ -74,31 +75,46 @@ class BatteryManagerDataSource @Inject constructor(
     }
 
     /**
-     * Reads the hardware charge cycle count with two fallback strategies:
+     * Reads the hardware charge cycle count with three fallback strategies:
      *
-     * 1. sysfs path `/sys/class/power_supply/battery/cycle_count` — readable without any
-     *    permission on Pixel and many other devices. Fast, no IPC.
-     * 2. BatteryManager.getIntProperty(9) — integer 9 is the hidden constant
-     *    BATTERY_PROPERTY_CYCLE_COUNT (not part of the public SDK surface, added in API 28).
-     *    Requires BATTERY_STATS on Android 16+; SecurityException is caught and -1 is returned.
+     * 1. BatteryManager.EXTRA_CYCLE_COUNT from the ACTION_BATTERY_CHANGED sticky intent
+     *    (API 34+, no permission required). This is the most reliable method on Pixel with
+     *    Android 14+ and avoids the SELinux restrictions that block sysfs on Android 16.
+     * 2. sysfs `/sys/class/power_supply/battery/cycle_count` — works on some devices without
+     *    SELinux restrictions, but blocked on Pixel with Android 16.
+     * 3. BatteryManager.getIntProperty(9) — hidden BATTERY_PROPERTY_CYCLE_COUNT constant.
+     *    Requires BATTERY_STATS on Android 16+; caught and returns -1 if not granted.
      *
-     * Returns -1 when neither source provides a valid (> 0) value. The UI displays "—" for -1.
+     * Returns -1 when no source provides a valid value. UI shows "—" for -1 or 0.
      */
-    fun readCycleCount(): Int {
-        // Priority 1: sysfs — works without root or special permissions on most Pixel devices.
+    fun readCycleCount(batteryIntent: Intent?): Int {
+        // Priority 1: EXTRA_CYCLE_COUNT from sticky broadcast (API 34+, no permission needed).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val cycles = batteryIntent?.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1) ?: -1
+            if (cycles > 0) return cycles
+        }
+
+        // Priority 2: sysfs — works without root on many devices (but blocked by SELinux on Android 16).
         try {
-            val sysfsValue = File("/sys/class/power_supply/battery/cycle_count")
-                .takeIf { it.exists() && it.canRead() }
-                ?.readText()?.trim()?.toIntOrNull()
-            if (sysfsValue != null && sysfsValue > 0) return sysfsValue
+            val paths = listOf(
+                "/sys/class/power_supply/battery/cycle_count",
+                "/sys/class/power_supply/Battery/cycle_count"
+            )
+            for (path in paths) {
+                val f = File(path)
+                if (f.exists() && f.canRead()) {
+                    val v = f.readText().trim().toIntOrNull()
+                    if (v != null && v > 0) return v
+                }
+            }
         } catch (_: Exception) {}
 
-        // Priority 2: hidden BatteryManager API.
-        // Note: BATTERY_PROPERTY_CHARGE_COUNTER (= 1) measures µAh, NOT cycles — do NOT use it here.
+        // Priority 3: hidden BatteryManager API.
+        // Note: BATTERY_PROPERTY_CHARGE_COUNTER (= 1) measures µAh, NOT cycles — do NOT use it.
         return try {
             batteryManager.getIntProperty(9 /* BATTERY_PROPERTY_CYCLE_COUNT, hidden API */)
                 .takeIf { it > 0 } ?: -1
-        } catch (_: SecurityException) { -1 }
+        } catch (_: Exception) { -1 }
     }
 
     /**
@@ -182,7 +198,8 @@ class BatteryManagerDataSource @Inject constructor(
             chargeStatus = chargeStatus,
             pluggedType = pluggedType,
             chargeCounter = chargeCounter,
-            cycleCount = readCycleCount(),   // called on every update; sysfs is fast (< 1 ms).
+            // Pass the already-fetched intent so EXTRA_CYCLE_COUNT can be read without a second IPC call.
+            cycleCount = readCycleCount(intent),
             maxCapacityMah = maxCapacityMah,
             hardwareHealth = hardwareHealth
         )

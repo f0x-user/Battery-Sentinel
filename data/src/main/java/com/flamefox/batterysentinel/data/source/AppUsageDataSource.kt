@@ -51,19 +51,29 @@ class AppUsageDataSource @Inject constructor(
             UsageStatsManager.INTERVAL_BEST, startTime, endTime
         ) ?: return emptyList()
 
+        // INTERVAL_BEST can return multiple UsageStats entries per package (e.g. system split-APKs,
+        // work profile copies, or multiple time-bucket rows). Aggregate by packageName to avoid
+        // duplicate entries with different time values in the UI.
+        val aggregated = mutableMapOf<String, Long>()
+        usageStats.forEach { stat ->
+            if (stat.totalTimeInForeground > 0) {
+                aggregated[stat.packageName] =
+                    (aggregated[stat.packageName] ?: 0L) + stat.totalTimeInForeground
+            }
+        }
+
         val pm = context.packageManager
-        return usageStats
-            .filter { it.totalTimeInForeground > 0 }
-            .map { stats ->
+        return aggregated
+            .map { (packageName, totalMs) ->
                 val appName = try {
-                    pm.getApplicationLabel(pm.getApplicationInfo(stats.packageName, 0)).toString()
+                    pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
                 } catch (e: PackageManager.NameNotFoundException) {
-                    stats.packageName
+                    packageName
                 }
                 AppUsage(
-                    packageName = stats.packageName,
+                    packageName = packageName,
                     appName = appName,
-                    foregroundTimeMs = stats.totalTimeInForeground
+                    foregroundTimeMs = totalMs
                 )
             }
             .sortedByDescending { it.foregroundTimeMs }

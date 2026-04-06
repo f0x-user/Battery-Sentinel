@@ -7,7 +7,8 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,18 +17,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -37,48 +36,38 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 
+// Three onboarding steps — no device-specific names, no optional permission steps.
 private data class OnboardingStep(
     val title: String,
     val description: String,
-    val buttonLabel: String,
     val icon: ImageVector
 )
 
 private val steps = listOf(
     OnboardingStep(
-        title = "Welcome to BatterySentinel",
-        description = "Monitor and optimize your battery health.",
-        buttonLabel = "Get Started",
+        title = "Willkommen bei BatterySentinel",
+        description = "Überwache und optimiere deine Akku-Gesundheit.",
         icon = Icons.Filled.BatteryChargingFull
     ),
     OnboardingStep(
-        title = "Notifications",
-        description = "Allow notifications to receive charge alerts and temperature warnings.",
-        buttonLabel = "Grant Permission",
-        icon = Icons.Filled.Notifications
+        title = "Benachrichtigungen",
+        description = "Erhalte Alarme bei vollem Akku und Temperaturwarnungen.",
+        icon = Icons.Filled.NotificationsActive
     ),
     OnboardingStep(
-        title = "Battery Optimization",
-        description = "Exclude BatterySentinel from battery optimization so the background service runs reliably.",
-        buttonLabel = "Exclude App",
+        title = "Akku-Optimierungen",
+        description = "Verhindere, dass Android den Monitoring-Service beendet.",
         icon = Icons.Filled.BatteryAlert
-    ),
-    OnboardingStep(
-        title = "Usage Statistics (optional)",
-        description = "Grant PACKAGE_USAGE_STATS to see per-app foreground time in the Apps tab.",
-        buttonLabel = "Grant Access",
-        icon = Icons.Filled.BarChart
-    ),
-    OnboardingStep(
-        title = "Write Settings (optional)",
-        description = "Grant WRITE_SETTINGS to control brightness and screen timeout directly from the app.",
-        buttonLabel = "Grant Permission",
-        icon = Icons.Filled.Tune
     )
 )
 
+/**
+ * Full-screen onboarding flow with three steps.
+ * Uses explicit background and text colors so the screen is readable in both light and dark theme.
+ */
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
@@ -96,100 +85,122 @@ fun OnboardingScreen(
         viewModel.nextStep()
     }
 
-    Column(
+    // Explicit background ensures readable contrast in both light and dark theme.
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp)
     ) {
-        Text(
-            text = "Step ${step + 1} / ${steps.size}",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Icon(
-            imageVector = currentStep.icon,
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Step indicator
+            Text(
+                text = "${step + 1} / ${steps.size}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Step icon — 80 dp, primary color
+            Icon(
+                imageVector = currentStep.icon,
+                contentDescription = null,
+                modifier = Modifier.size(80.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Content card — surfaceVariant background with explicit text colors
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                Text(
-                    currentStep.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    currentStep.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = currentStep.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = currentStep.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                when (step) {
-                    0 -> viewModel.nextStep()
-                    1 -> {
+            // Primary action button — label depends on current step
+            when (step) {
+                0 -> Button(
+                    onClick = { viewModel.nextStep() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Los geht's", fontSize = 16.sp)
+                }
+
+                1 -> Button(
+                    onClick = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                         } else {
                             viewModel.nextStep()
                         }
-                    }
-                    2 -> {
-                        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                            data = Uri.parse("package:com.flamefox.batterysentinel")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Berechtigung erteilen", fontSize = 16.sp)
+                }
+
+                2 -> Button(
+                    onClick = {
+                        val intent = Intent(
+                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        ).apply {
+                            data = Uri.parse("package:${context.packageName}")
                         }
                         context.startActivity(intent)
-                        viewModel.nextStep()
-                    }
-                    3 -> {
-                        context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-                        viewModel.nextStep()
-                    }
-                    4 -> {
-                        context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS))
                         viewModel.markOnboardingComplete()
                         onComplete()
-                    }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Optimierungen deaktivieren", fontSize = 16.sp)
                 }
             }
-        ) { Text(currentStep.buttonLabel) }
 
-        if (step < steps.size - 1) {
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = {
-                    if (step >= steps.size - 2) {
-                        viewModel.markOnboardingComplete()
-                        onComplete()
-                    } else {
-                        viewModel.nextStep()
-                    }
+            // Skip button — always visible except on the last step where the primary action
+            // completes onboarding anyway
+            if (step < steps.size - 1) {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = {
+                        if (step >= steps.size - 2) {
+                            viewModel.markOnboardingComplete()
+                            onComplete()
+                        } else {
+                            viewModel.nextStep()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Überspringen")
                 }
-            ) { Text("Skip") }
+            }
         }
     }
 }
