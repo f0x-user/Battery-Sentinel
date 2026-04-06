@@ -34,10 +34,20 @@ import com.flamefox.batterysentinel.core.ui.theme.ChargingBlue
 import com.flamefox.batterysentinel.core.ui.theme.TempWarnOrange
 import com.flamefox.batterysentinel.domain.model.ChargeStatus
 
+/**
+ * Main dashboard screen. Displays real-time battery metrics in a scrollable grid of StatCards.
+ *
+ * Data flow: BatteryMonitorService → BatteryRepository → DashboardViewModel → DashboardUiState → here.
+ * The ViewModel collects two flows: battery state (every 1 s) and drain rate (every 60 s).
+ *
+ * Removed tiles (v1.1.4): Screen-On Drain, Screen-Off Drain — too noisy, data needs longer
+ * measurement window to be meaningful. Overall Drain Rate tile remains.
+ */
 @Composable
 fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
 
+    // Show a centered spinner until the first battery state arrives from the service.
     if (state.isLoading) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -51,6 +61,9 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
     }
 
     val battery = state.batteryState
+
+    // Animate ring color based on charge level and charging state.
+    // Charging always shows blue; discharging transitions green → yellow → orange → red.
     val batteryColor by animateColorAsState(
         targetValue = when {
             battery.isCharging -> ChargingBlue
@@ -72,6 +85,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
         Text("Battery Dashboard", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Circular ring chart — percentage and charge status label inside the ring.
         BatteryRingChart(
             percentage = battery.percentage,
             size = 200.dp,
@@ -101,6 +115,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        // Row 1: Current (signed mA, blue when charging) and Voltage (mV).
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -109,6 +124,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 label = "Current",
                 value = battery.currentMa.toSignedCurrentString(),
                 modifier = Modifier.weight(1f),
+                // Positive current = charging (shown in blue), negative = discharging.
                 valueColor = if (battery.isCharging) ChargingBlue else MaterialTheme.colorScheme.onSurface
             )
             StatCard(
@@ -120,6 +136,9 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Row 2: Temperature (orange warning above 40 °C) and hardware charge cycle count.
+        // Cycle count reads sysfs first, then BatteryManager property 9 (hidden API).
+        // Shows "—" when unavailable (returns -1 or 0 from data layer).
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -133,6 +152,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
             )
             StatCard(
                 label = "Charge Cycles",
+                // cycleCount > 0 means a real value was read; 0 or -1 means unavailable.
                 value = if (battery.cycleCount > 0) "${battery.cycleCount}" else "—",
                 modifier = Modifier.weight(1f),
                 unit = "hardware"
@@ -141,6 +161,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Row 3: Hardware health string (mapped from BatteryManager health codes) and
+        // estimated max capacity derived from charge counter ÷ current percentage.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -160,12 +182,15 @@ fun DashboardScreen(viewModel: DashboardViewModel = hiltViewModel()) {
                 label = "Max Capacity",
                 value = if (battery.maxCapacityMah > 0) "${battery.maxCapacityMah} mAh" else "—",
                 modifier = Modifier.weight(1f),
+                // "est." label makes clear this is a calculated approximation, not a hardware read.
                 unit = if (battery.maxCapacityMah > 0) "est." else ""
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
+        // Row 4: Power source (AC / USB / Wireless / None) and overall drain rate in %/h.
+        // Drain rate is computed from BatterySample history over the last 60 minutes.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

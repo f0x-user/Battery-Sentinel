@@ -18,6 +18,19 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Single source of truth for raw battery data from the Android system.
+ *
+ * Two read strategies are offered:
+ *   - [observeBatteryState]: polling flow (1 s interval) used by BatteryMonitorService to persist
+ *     samples and drive the Dashboard UI.
+ *   - [observeBatteryChangedEvents]: broadcast-based flow that fires only when the system sends
+ *     ACTION_BATTERY_CHANGED (level change, plug/unplug, temperature change).
+ *
+ * Permission notes (Android 16 / API 36):
+ *   CURRENT_NOW, CHARGE_COUNTER require BATTERY_STATS — fall back to 0 if not granted.
+ *   Cycle count uses sysfs (no permission on Pixel) or BatteryManager hidden property 9.
+ */
 @Singleton
 class BatteryManagerDataSource @Inject constructor(
     @ApplicationContext private val context: Context
@@ -25,6 +38,10 @@ class BatteryManagerDataSource @Inject constructor(
     private val batteryManager: BatteryManager =
         context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
 
+    /**
+     * Emits a fresh [BatteryState] every second by polling [readCurrentState].
+     * Used by [BatteryMonitorService] to write samples to Room and update the live state flow.
+     */
     fun observeBatteryState(): Flow<BatteryState> = flow {
         while (true) {
             emit(readCurrentState())
@@ -32,6 +49,11 @@ class BatteryManagerDataSource @Inject constructor(
         }
     }
 
+    /**
+     * Emits a [BatteryState] each time the system broadcasts ACTION_BATTERY_CHANGED.
+     * Suitable for reacting to plug/unplug events without continuous polling.
+     * The flow is cancelled (and the receiver unregistered) when the collector is cancelled.
+     */
     fun observeBatteryChangedEvents(): Flow<BatteryState> = callbackFlow {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
@@ -42,29 +64,50 @@ class BatteryManagerDataSource @Inject constructor(
         awaitClose { context.unregisterReceiver(receiver) }
     }
 
+    /**
+     * Reads the current battery state synchronously via a sticky broadcast.
+     * Passing null as receiver to registerReceiver returns the last sticky intent immediately.
+     */
     fun readCurrentState(): BatteryState {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         return parseBatteryIntent(intent)
     }
 
     /**
-     * Reads the hardware charge cycle count.
-     * Tries sysfs first (no permission required on Pixel devices), then falls back to
-     * BatteryManager.BATTERY_PROPERTY_CYCLE_COUNT (API 28). Returns -1 if unavailable.
+     * Reads the hardware charge cycle count with two fallback strategies:
+     *
+     * 1. sysfs path `/sys/class/power_supply/battery/cycle_count` — readable without any
+     *    permission on Pixel and many other devices. Fast, no IPC.
+     * 2. BatteryManager.getIntProperty(9) — integer 9 is the hidden constant
+     *    BATTERY_PROPERTY_CYCLE_COUNT (not part of the public SDK surface, added in API 28).
+     *    Requires BATTERY_STATS on Android 16+; SecurityException is caught and -1 is returned.
+     *
+     * Returns -1 when neither source provides a valid (> 0) value. The UI displays "—" for -1.
      */
     fun readCycleCount(): Int {
+        // Priority 1: sysfs — works without root or special permissions on most Pixel devices.
         try {
             val sysfsValue = File("/sys/class/power_supply/battery/cycle_count")
                 .takeIf { it.exists() && it.canRead() }
                 ?.readText()?.trim()?.toIntOrNull()
             if (sysfsValue != null && sysfsValue > 0) return sysfsValue
         } catch (_: Exception) {}
+
+        // Priority 2: hidden BatteryManager API.
+        // Note: BATTERY_PROPERTY_CHARGE_COUNTER (= 1) measures µAh, NOT cycles — do NOT use it here.
         return try {
             batteryManager.getIntProperty(9 /* BATTERY_PROPERTY_CYCLE_COUNT, hidden API */)
                 .takeIf { it > 0 } ?: -1
         } catch (_: SecurityException) { -1 }
     }
 
+    /**
+     * Parses an ACTION_BATTERY_CHANGED intent into a [BatteryState] domain model.
+     *
+     * All fields that can be read from intent extras are read there (no permission required).
+     * Fields that require BATTERY_STATS are wrapped in [batteryIntProperty] which returns a
+     * safe default (0) on SecurityException so the app never crashes.
+     */
     private fun parseBatteryIntent(intent: Intent?): BatteryState {
         // Percentage from Intent extras — no permissions required, always available.
         val level = intent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
@@ -75,13 +118,14 @@ class BatteryManagerDataSource @Inject constructor(
         // Current (µA → mA) and charge counter (µAh) require BATTERY_STATS on API 36.
         // Fall back to 0 when the permission is not granted — app never crashes.
         val rawCurrent = batteryIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW, 0)
-        val currentMa = rawCurrent / 1000
+        val currentMa = rawCurrent / 1000   // µA → mA
 
+        // chargeCounter in µAh; used to estimate max capacity (see below).
         val chargeCounter = batteryIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER, 0)
 
         val voltageMv = intent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
         val rawTemp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        val tempCelsius = rawTemp / 10f
+        val tempCelsius = rawTemp / 10f     // Android stores temperature as tenths of degrees Celsius.
 
         // Health needs no permissions.
         val healthCode = intent?.getIntExtra(
@@ -99,6 +143,8 @@ class BatteryManagerDataSource @Inject constructor(
         }
 
         // Max capacity estimate: chargeCounter (µAh) / (percentage / 100) → mAh.
+        // Only computed when percentage is in a reliable range (5–99 %) to avoid division
+        // edge cases and wildly inaccurate readings near full or empty.
         val maxCapacityMah = if (chargeCounter > 0 && percentage in 5..99) {
             (chargeCounter / (percentage / 100.0) / 1000.0).toInt()
         } else 0
@@ -124,6 +170,7 @@ class BatteryManagerDataSource @Inject constructor(
             else -> PluggedType.NONE
         }
 
+        // isCharging is true for both CHARGING and FULL states, driving the blue color in the UI.
         val isCharging = chargeStatus == ChargeStatus.CHARGING || chargeStatus == ChargeStatus.FULL
 
         return BatteryState(
@@ -135,15 +182,16 @@ class BatteryManagerDataSource @Inject constructor(
             chargeStatus = chargeStatus,
             pluggedType = pluggedType,
             chargeCounter = chargeCounter,
-            cycleCount = readCycleCount(),
+            cycleCount = readCycleCount(),   // called on every update; sysfs is fast (< 1 ms).
             maxCapacityMah = maxCapacityMah,
             hardwareHealth = hardwareHealth
         )
     }
 
     /**
-     * Wraps getIntProperty with SecurityException handling.
+     * Wraps [BatteryManager.getIntProperty] with SecurityException handling.
      * CURRENT_NOW, CHARGE_COUNTER, CYCLE_COUNT require BATTERY_STATS on Android 16+.
+     * Returns [default] instead of throwing when the permission is missing.
      */
     private fun batteryIntProperty(property: Int, default: Int): Int =
         try {

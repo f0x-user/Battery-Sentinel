@@ -15,6 +15,18 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * UI state for [SettingsScreen].
+ *
+ * @property appSettings         Persisted user preferences (thresholds, notifications toggle).
+ * @property hasUsageStatsPermission  PACKAGE_USAGE_STATS — required for the Apps screen.
+ * @property hasWriteSettingsPermission  WRITE_SETTINGS — required for brightness / timeout control.
+ * @property systemBackup        Latest system backup (convenience shorthand for [allBackups][0]).
+ * @property allBackups          All stored backups, newest first (max 5, from SystemBackupDataStore).
+ * @property restoreResult       Result of the last restore attempt; null when no attempt was made.
+ * @property showAbout           Controls visibility of the About dialog.
+ * @property dataClearSuccess    True immediately after a successful data-deletion; triggers a dialog.
+ */
 data class SettingsUiState(
     val appSettings: AppSettings = AppSettings(),
     val hasUsageStatsPermission: Boolean = false,
@@ -26,8 +38,20 @@ data class SettingsUiState(
     val dataClearSuccess: Boolean = false
 )
 
+/** Result of a backup restore operation, mapped to a user-facing message in the UI. */
 enum class RestoreResult { SUCCESS, PARTIAL, NO_BACKUP }
 
+/**
+ * ViewModel for [SettingsScreen].
+ *
+ * Observes three cold flows from [SystemSettingsRepository] at init time:
+ *   - app settings (DataStore Preferences)
+ *   - latest system backup
+ *   - all system backups (list, newest first)
+ *
+ * Permission checks are not reactive (no flow); they are re-evaluated on demand via
+ * [refreshPermissions], called at init and whenever the user taps "Refresh Permission Status".
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SystemSettingsRepository,
@@ -101,6 +125,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Restores the system backup at [index] in [SettingsUiState.allBackups] (newest-first order).
+     * Delegates to [SystemSettingsRepository.restoreSystemBackupByBackup] so the exact backup
+     * object is passed through — avoids a second DataStore read on the repository side.
+     * Sets [SettingsUiState.restoreResult] to trigger a result dialog in the UI.
+     */
     fun restoreBackup(index: Int) {
         viewModelScope.launch {
             val backups = _uiState.value.allBackups

@@ -55,18 +55,27 @@ class SystemSettingsRepositoryImpl @Inject constructor(
         )
     }
 
+    /** Restores the latest backup by reading it from [SystemBackupDataStore] and delegating. */
     override suspend fun restoreSystemBackup(): Boolean {
         val b = backupStore.backup.first() ?: return false
         return restoreSystemBackupByBackup(b)
     }
 
+    /**
+     * Applies all settings from [backup] to the system.
+     *
+     * Each setting is applied independently so a partial failure (e.g. WRITE_SETTINGS revoked)
+     * does not block the remaining settings. [allOk] tracks whether every write succeeded.
+     * Doze constants are skipped when they hold their sentinel values ("default" / "unknown")
+     * to avoid resetting Doze to an arbitrary state if it was never customised.
+     */
     override suspend fun restoreSystemBackupByBackup(backup: SystemBackup): Boolean {
         var allOk = true
         if (!dataSource.setAdaptiveBrightness(backup.isAdaptiveBrightness)) allOk = false
         if (!dataSource.setBrightness(backup.brightness)) allOk = false
         if (!dataSource.setScreenTimeout(backup.screenTimeoutMs)) allOk = false
         if (!dataSource.setBatterySaver(backup.isBatterySaverEnabled)) allOk = false
-        dataSource.setSync(backup.isSyncEnabled)
+        dataSource.setSync(backup.isSyncEnabled)   // setSync has no return value (best-effort)
         if (backup.dozeConstants != "default" && backup.dozeConstants != "unknown") {
             if (!dataSource.setDozeConstants(backup.dozeConstants)) allOk = false
         }

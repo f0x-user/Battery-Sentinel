@@ -48,9 +48,19 @@ import com.flamefox.batterysentinel.core.common.toFormattedDateTime
 import com.flamefox.batterysentinel.core.common.toFormattedDuration
 import com.flamefox.batterysentinel.domain.model.ChargingSession
 
+/**
+ * App usage screen with three tabs:
+ *   - Usage Time: foreground time per app in the last 24 h (PACKAGE_USAGE_STATS).
+ *   - Battery Usage: same usage-time data + link to Android system battery screen.
+ *     Previously required BATTERY_STATS (ADB-only); replaced with user-grantable data.
+ *   - Per Cycle: foreground time during a selected past charging session.
+ *
+ * All three tabs reuse [AppUsageRow] and share the same [AppsUiState] from [AppsViewModel].
+ */
 @Composable
 fun AppsScreen(viewModel: AppsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
+    // Tab index held in local UI state; does not need to survive process death.
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -73,6 +83,12 @@ fun AppsScreen(viewModel: AppsViewModel = hiltViewModel()) {
     }
 }
 
+/**
+ * Displays foreground usage time for each app over the last 24 hours.
+ * Data comes from UsageStatsManager via [AppsViewModel.loadData].
+ * List is sorted descending by usage time (longest first) by the ViewModel.
+ * [progress] for each row is relative to the most-used app (= 1.0f).
+ */
 @Composable
 private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
@@ -86,10 +102,12 @@ private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
         return
     }
 
+    // Largest usage time in the list — used to compute relative progress bar widths.
     val maxTime = state.appUsage.maxOfOrNull { it.foregroundTimeMs } ?: 1L
 
     LazyColumn {
         itemsIndexed(state.appUsage) { index, app ->
+            // HorizontalDivider between items (not before the first one).
             if (index > 0) HorizontalDivider()
             AppUsageRow(
                 appName = app.appName,
@@ -102,6 +120,15 @@ private fun UsageTab(state: AppsUiState, viewModel: AppsViewModel) {
     }
 }
 
+/**
+ * Battery Usage tab — previously showed per-app mAh consumption via BATTERY_STATS (ADB-only).
+ * Replaced in v1.1.4 with the same usage-time data from PACKAGE_USAGE_STATS (user-grantable).
+ * A button at the bottom links to the Android system battery screen for detailed mAh data.
+ *
+ * The "android.settings.BATTERY_USAGE_SETTINGS" action string is used directly because
+ * Settings.ACTION_BATTERY_USAGE_SETTINGS is not a public SDK constant (it exists on most
+ * devices since Android 12 but is not formally part of android.provider.Settings).
+ */
 @Composable
 private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
@@ -128,6 +155,7 @@ private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
                 onClick = { openAppSettings(context, app.packageName) }
             )
         }
+        // Footer: hint text + system deep-link for per-app mAh data.
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -139,6 +167,8 @@ private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = {
+                    // Intent action string (not a Settings constant) — wrapped in try-catch
+                    // because the target activity may not exist on all OEM firmwares.
                     try {
                         context.startActivity(Intent("android.settings.BATTERY_USAGE_SETTINGS"))
                     } catch (_: Exception) {}
@@ -151,6 +181,18 @@ private fun BatteryTab(state: AppsUiState, viewModel: AppsViewModel) {
     }
 }
 
+/**
+ * Shows foreground app usage for a user-selected completed charging session.
+ *
+ * State machine:
+ *   1. No PACKAGE_USAGE_STATS permission → [PermissionPrompt].
+ *   2. No completed sessions in the Room database → centered empty state with icon.
+ *   3. No session selected yet → session picker list.
+ *   4. Session selected → header with session summary + app usage list for that time window.
+ *
+ * [AppsViewModel.selectSession] triggers a Room + UsageStats query for the selected session's
+ * time range and stores the result in [AppsUiState.sessionApps].
+ */
 @Composable
 private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
     val context = LocalContext.current
@@ -165,6 +207,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
         return
     }
 
+    // Empty state: no completed sessions recorded yet (app was just installed or data was cleared).
     if (state.sessions.isEmpty()) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -191,6 +234,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
 
     val selected = state.selectedSession
 
+    // No session picked yet: show the list of completed sessions as clickable cards.
     if (selected == null) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             item {
@@ -206,8 +250,10 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
             }
         }
     } else {
+        // Detail view: back button + session summary header + app list for that window.
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Back button clears the selection and returns to the session picker.
                 IconButton(onClick = { viewModel.selectSession(null) }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
@@ -227,8 +273,11 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
             Spacer(modifier = Modifier.height(8.dp))
 
             if (state.isLoadingSession) {
+                // UsageStats query is in progress — show spinner while waiting.
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
             } else if (state.sessionApps.isEmpty()) {
+                // UsageStats returned no entries for this time window (e.g. window too short,
+                // or UsageStats interval granularity does not cover the session period).
                 Text(
                     "No app usage data available for this period.",
                     style = MaterialTheme.typography.bodySmall,
@@ -253,6 +302,7 @@ private fun PerCycleTab(state: AppsUiState, viewModel: AppsViewModel) {
     }
 }
 
+/** Clickable card showing a charging session's start time, percentage range, and duration. */
 @Composable
 private fun SessionPickerCard(session: ChargingSession, onClick: () -> Unit) {
     androidx.compose.material3.Card(
@@ -283,6 +333,16 @@ private fun SessionPickerCard(session: ChargingSession, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Reusable row composable used in all three tabs.
+ *
+ * Layout:
+ *   [app name + progress bar (fills width)] [12 dp gap] [formatted time/value]
+ *
+ * The [progress] value (0f–1f) is relative to the most-used app in the current list,
+ * so the top app always has a full-width bar and others scale proportionally.
+ * Tapping the row opens the app's system settings page via [openAppSettings].
+ */
 @Composable
 private fun AppUsageRow(
     appName: String,
@@ -301,7 +361,7 @@ private fun AppUsageRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(appName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
             LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
+                progress = { progress.coerceIn(0f, 1f) },  // guard against floating-point drift
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp),
@@ -317,6 +377,11 @@ private fun AppUsageRow(
     }
 }
 
+/**
+ * Shown when the app lacks a required permission.
+ * [onGrant] opens the appropriate system settings page; [onRefresh] re-checks permissions
+ * after the user returns from settings.
+ */
 @Composable
 private fun PermissionPrompt(
     title: String,
@@ -341,6 +406,7 @@ private fun PermissionPrompt(
     }
 }
 
+/** Opens the system application details screen for [packageName] (shows permissions, storage, etc.). */
 private fun openAppSettings(context: android.content.Context, packageName: String) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.parse("package:$packageName")

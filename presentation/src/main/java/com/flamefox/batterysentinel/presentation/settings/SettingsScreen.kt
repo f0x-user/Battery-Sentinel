@@ -52,6 +52,27 @@ import java.util.Locale
 
 private const val APP_VERSION = "1.1.3"
 
+/**
+ * Settings screen — configuration hub for permissions, alert thresholds, notifications,
+ * system setting backups, and data management.
+ *
+ * Sections:
+ *   1. Permissions — shows grant status for PACKAGE_USAGE_STATS and WRITE_SETTINGS.
+ *   2. Battery Quick Links — deep-links into Android system battery screens.
+ *   3. Alert Thresholds — sliders persisted via AppSettingsDataStore (DataStore Preferences).
+ *   4. Notifications — toggle persisted alongside other app settings.
+ *   5. System Backups — up to 5 rotating backups; user picks one with a RadioButton to restore.
+ *   6. Data Deletion — deletes all Room data and resets preferences (Art. 17 GDPR).
+ *   7. About dialog — changelog and local-data privacy notice.
+ *
+ * v1.1.4 changes:
+ *   - "Open Battery Settings" uses POWER_USAGE_SUMMARY intent (was BATTERY_SAVER_SETTINGS).
+ *   - "Show Battery Usage" intent is wrapped in try-catch to prevent ActivityNotFoundException.
+ *   - System Backups: every backup is selectable via RadioButton; Restore button uses the
+ *     selected index instead of always restoring the latest backup.
+ *   - "Privacy (GDPR)" section removed; Delete-All-Data button kept; local-storage notice
+ *     moved to the About dialog.
+ */
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsState()
@@ -102,12 +123,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Battery quick links
+        // ── Battery Quick Links ────────────────────────────────────────────────────────────────
+        // Intent action strings are used as raw strings where no public SDK constant exists.
+        // Each intent is wrapped in try-catch: OEMs may not provide every target activity.
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Battery Quick Links", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
-                // FIX 4.1: Android allgemeiner Akku-Screen (mit Fallback)
+                // Opens the general battery screen (usage summary). Falls back to Battery Saver
+                // settings if the OEM removed the summary screen.
+                // "android.intent.action.POWER_USAGE_SUMMARY" is the action behind the battery
+                // card in the system launcher — not a public Settings constant.
                 OutlinedButton(
                     onClick = {
                         try {
@@ -123,7 +149,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     Text("Open Battery Settings")
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                // FIX 4.2: try-catch um Absturz zu verhindern
+                // Opens per-app battery usage screen.
+                // "android.settings.BATTERY_USAGE_SETTINGS" exists on Android 12+ devices
+                // but is not defined as a constant in android.provider.Settings.
+                // Falls back to the main system Settings screen on unsupported devices.
                 OutlinedButton(
                     onClick = {
                         try {
@@ -213,7 +242,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // FIX 4.3: System backups mit auswählbarem Restore
+        // ── System Backups ─────────────────────────────────────────────────────────────────────
+        // Up to 5 rotating backups stored in SystemBackupDataStore (DataStore Preferences).
+        // The user picks a backup via RadioButton; the Restore button calls
+        // SettingsViewModel.restoreBackup(index) which delegates to
+        // SystemSettingsRepository.restoreSystemBackupByBackup(backup).
         SystemBackupCard(
             backups = state.allBackups,
             onRestore = { index -> viewModel.restoreBackup(index) }
@@ -241,7 +274,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // FIX 4.4: Nur noch Delete-Button, kein Privacy (GDPR) Titel/Text
+        // ── Data Deletion (Art. 17 GDPR) ──────────────────────────────────────────────────────
+        // Deletes all Room tables (battery samples + charging sessions) and clears DataStore.
+        // The Privacy (GDPR) section header and description were removed in v1.1.4 — the
+        // local-storage notice is now in the About dialog. Only the delete action remains here.
         DataDeletionCard(onClearData = { viewModel.clearAllData() })
 
         // About dialog
@@ -263,7 +299,12 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     }
 }
 
-// FIX 4.4: Umbenannt, kein Privacy-Header mehr
+/**
+ * Shows a single destructive action: delete all locally stored data.
+ * Requires a confirmation AlertDialog to prevent accidental taps.
+ * Previously this card had a "Privacy (GDPR)" title and description block; those were
+ * removed in v1.1.4 and replaced by a one-line local-storage notice in the About dialog.
+ */
 @Composable
 private fun DataDeletionCard(onClearData: () -> Unit) {
     var showConfirm by remember { mutableStateOf(false) }
@@ -381,7 +422,18 @@ private fun ChangelogEntry(version: String, entries: List<String>) {
     }
 }
 
-// FIX 4.3: Auswählbares Backup-Restore mit RadioButton
+/**
+ * Displays all stored system backups (up to 5) as selectable cards with RadioButtons.
+ *
+ * The user picks a backup by tapping its card or the RadioButton; a primary-colored border
+ * highlights the selection. The "Backup wiederherstellen" button is only enabled when at
+ * least one backup is selected ([selectedBackupIndex] >= 0).
+ *
+ * On confirm, [onRestore] is called with the selected index. The index refers to the
+ * position in the [backups] list (already sorted newest-first by SystemBackupDataStore).
+ * The ViewModel translates the index back to a [SystemBackup] object and calls
+ * [SystemSettingsRepository.restoreSystemBackupByBackup].
+ */
 @Composable
 private fun SystemBackupCard(
     backups: List<com.flamefox.batterysentinel.domain.model.SystemBackup>,

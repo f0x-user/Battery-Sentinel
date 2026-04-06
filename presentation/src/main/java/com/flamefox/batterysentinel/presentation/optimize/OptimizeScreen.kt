@@ -59,6 +59,17 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.flamefox.batterysentinel.core.ui.theme.BatteryGreen
 import com.flamefox.batterysentinel.core.ui.theme.BatteryOrange
 
+/**
+ * Optimize screen — lets the user configure brightness, screen timeout, and sync, then
+ * apply all changes in one shot via the Run button.
+ *
+ * Architecture: UI holds "pending" values (local copies of desired settings).
+ * Clicking Run calls [OptimizeViewModel.runOptimizations] which writes them to the system
+ * via [ControlBrightnessUseCase] and [SystemSettingsRepository].
+ * READ_ONLY values (Battery Saver, Battery Optimizations) are shown as status cards with
+ * links to the relevant Android settings screens — they cannot be set programmatically
+ * without elevated permissions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
@@ -80,7 +91,7 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Run button
+        // Run button — highlighted when there are unsaved pending changes.
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -132,7 +143,10 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Display brightness
+        // ── Display brightness ─────────────────────────────────────────────────────────────────
+        // Requires WRITE_SETTINGS permission. If not granted, the Grant button is shown instead.
+        // Adaptive brightness delegates control to the system's auto-brightness algorithm.
+        // Manual slider sets Settings.System.SCREEN_BRIGHTNESS (0–255).
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
@@ -212,7 +226,13 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Power management — read-only status + open-in-settings actions
+        // ── Power management ───────────────────────────────────────────────────────────────────
+        // Read-only status cards — these settings cannot be set without elevated permissions.
+        // Battery Saver: opens ACTION_BATTERY_SAVER_SETTINGS.
+        // Battery Optimizations: smart intent routing —
+        //   • If already ignored (unrestricted): opens the full list so the user can re-enable.
+        //   • If still optimized: opens the per-app request dialog (ACTION_REQUEST_IGNORE_…).
+        // A color-coded AssistChip shows the current state at a glance (green / orange).
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -307,7 +327,9 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Background sync
+        // ── Background sync ────────────────────────────────────────────────────────────────────
+        // Toggles ContentResolver.setMasterSyncAutomatically via SystemSettingsRepository.
+        // Disabling sync stops all account syncs (Gmail, Calendar, etc.) in the background.
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 OptimizeSectionHeader(
@@ -324,7 +346,8 @@ fun OptimizeScreen(viewModel: OptimizeViewModel = hiltViewModel()) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Battery care tips
+        // ── Battery care tips ──────────────────────────────────────────────────────────────────
+        // Static informational content — no interaction, purely educational.
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
