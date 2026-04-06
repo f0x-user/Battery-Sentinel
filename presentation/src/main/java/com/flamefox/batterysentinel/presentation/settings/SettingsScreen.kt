@@ -362,8 +362,24 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 Text("Version $APP_VERSION", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(12.dp))
-                Text("Changes in this version:", style = MaterialTheme.typography.labelMedium)
+                Text("Changelog", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(6.dp))
+                ChangelogEntry("1.1.5", listOf(
+                    "Onboarding: neu gestaltet — korrekter Kontrast, deutsche Texte, 3 Schritte",
+                    "Apps: doppelte Einträge behoben (Aggregation nach Package-Name)",
+                    "Ladezyklen: EXTRA_CYCLE_COUNT als primäre Quelle (API 34+, keine Permission)"
+                ))
+                Spacer(modifier = Modifier.height(8.dp))
+                ChangelogEntry("1.1.4", listOf(
+                    "Dashboard: Screen-On/Off Drain-Kacheln entfernt",
+                    "Apps: neues Zeilen-Layout mit Fortschrittsbalken, Battery-Tab ohne ADB",
+                    "Apps: Per Cycle — verbesserter Leer-Zustand mit Icon",
+                    "Optimize: Akku-Optimierungen-Intent korrigiert, Status-Chip hinzugefügt",
+                    "Settings: Open Battery Settings korrigiert, Show Battery Usage Absturz behoben",
+                    "Settings: Backup-Liste mit RadioButton-Auswahl, Restore-Button pro Eintrag",
+                    "Settings: Privacy-Abschnitt entfernt, Datenschutzhinweis in About verschoben"
+                ))
+                Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.3", listOf(
                     "Onboarding: step icons, localized texts, device name removed",
                     "Dashboard: Sessions tile removed, duplicate Plugged tile fixed",
