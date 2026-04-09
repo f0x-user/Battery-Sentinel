@@ -50,7 +50,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private const val APP_VERSION = "1.1.5"
+private const val APP_VERSION = "1.1.6"
 
 /**
  * Settings screen — configuration hub for permissions, alert thresholds, notifications,
@@ -292,6 +292,12 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("Changelog", style = MaterialTheme.typography.labelMedium)
                 Spacer(modifier = Modifier.height(6.dp))
+                ChangelogEntry("1.1.6", listOf(
+                    "Settings: removed Delete All Data (GDPR) button",
+                    "Optimize: shows current system state only — no auto-apply",
+                    "App stops completely when swiped away from recents"
+                ))
+                Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.5", listOf(
                     "Onboarding: neu gestaltet — korrekter Kontrast, deutsche Texte, 3 Schritte",
                     "Apps: doppelte Einträge behoben (Aggregation nach Package-Name)",
