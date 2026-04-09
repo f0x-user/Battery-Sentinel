@@ -299,19 +299,19 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.5", listOf(
-                    "Onboarding: neu gestaltet — korrekter Kontrast, deutsche Texte, 3 Schritte",
-                    "Apps: doppelte Einträge behoben (Aggregation nach Package-Name)",
-                    "Ladezyklen: EXTRA_CYCLE_COUNT als primäre Quelle (API 34+, keine Permission)"
+                    "Onboarding: redesigned with correct contrast, 3 steps",
+                    "Apps: fixed duplicate entries (aggregation by package name)",
+                    "Charge cycles: EXTRA_CYCLE_COUNT as primary source (API 34+, no permission needed)"
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.4", listOf(
-                    "Dashboard: Screen-On/Off Drain-Kacheln entfernt",
-                    "Apps: neues Zeilen-Layout mit Fortschrittsbalken, Battery-Tab ohne ADB",
-                    "Apps: Per Cycle — verbesserter Leer-Zustand mit Icon",
-                    "Optimize: Akku-Optimierungen-Intent korrigiert, Status-Chip hinzugefügt",
-                    "Settings: Open Battery Settings korrigiert, Show Battery Usage Absturz behoben",
-                    "Settings: Backup-Liste mit RadioButton-Auswahl, Restore-Button pro Eintrag",
-                    "Settings: Privacy-Abschnitt entfernt, Datenschutzhinweis in About verschoben"
+                    "Dashboard: removed Screen-On/Off Drain tiles",
+                    "Apps: new row layout with progress bar, Battery tab without ADB",
+                    "Apps: Per Cycle — improved empty state with icon",
+                    "Optimize: fixed battery optimization intent, added status chip",
+                    "Settings: fixed Open Battery Settings, fixed Show Battery Usage crash",
+                    "Settings: backup list with RadioButton selection, restore button per entry",
+                    "Settings: removed Privacy section, moved privacy notice into About"
                 ))
                 Spacer(modifier = Modifier.height(8.dp))
                 ChangelogEntry("1.1.3", listOf(
@@ -349,7 +349,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 ))
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    "Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.",
+                    "All data is stored exclusively locally on this device.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
