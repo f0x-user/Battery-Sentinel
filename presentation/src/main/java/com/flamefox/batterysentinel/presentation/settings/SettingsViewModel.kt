@@ -25,7 +25,6 @@ import javax.inject.Inject
  * @property allBackups          All stored backups, newest first (max 5, from SystemBackupDataStore).
  * @property restoreResult       Result of the last restore attempt; null when no attempt was made.
  * @property showAbout           Controls visibility of the About dialog.
- * @property dataClearSuccess    True immediately after a successful data-deletion; triggers a dialog.
  */
 data class SettingsUiState(
     val appSettings: AppSettings = AppSettings(),
@@ -34,8 +33,7 @@ data class SettingsUiState(
     val systemBackup: SystemBackup? = null,
     val allBackups: List<SystemBackup> = emptyList(),
     val restoreResult: RestoreResult? = null,
-    val showAbout: Boolean = false,
-    val dataClearSuccess: Boolean = false
+    val showAbout: Boolean = false
 )
 
 /** Result of a backup restore operation, mapped to a user-facing message in the UI. */
@@ -157,14 +155,4 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAbout = false)
     }
 
-    fun clearAllData() {
-        viewModelScope.launch {
-            settingsRepository.clearAllUserData()
-            _uiState.value = _uiState.value.copy(dataClearSuccess = true)
-        }
-    }
-
-    fun dismissDataClearSuccess() {
-        _uiState.value = _uiState.value.copy(dataClearSuccess = false)
-    }
 }

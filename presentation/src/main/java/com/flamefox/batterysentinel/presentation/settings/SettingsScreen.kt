@@ -62,8 +62,7 @@ private const val APP_VERSION = "1.1.5"
  *   3. Alert Thresholds — sliders persisted via AppSettingsDataStore (DataStore Preferences).
  *   4. Notifications — toggle persisted alongside other app settings.
  *   5. System Backups — up to 5 rotating backups; user picks one with a RadioButton to restore.
- *   6. Data Deletion — deletes all Room data and resets preferences (Art. 17 GDPR).
- *   7. About dialog — changelog and local-data privacy notice.
+ *   6. About dialog — changelog and local-data privacy notice.
  *
  * v1.1.4 changes:
  *   - "Open Battery Settings" uses POWER_USAGE_SUMMARY intent (was BATTERY_SAVER_SETTINGS).
@@ -272,81 +271,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // ── Data Deletion (Art. 17 GDPR) ──────────────────────────────────────────────────────
-        // Deletes all Room tables (battery samples + charging sessions) and clears DataStore.
-        // The Privacy (GDPR) section header and description were removed in v1.1.4 — the
-        // local-storage notice is now in the About dialog. Only the delete action remains here.
-        DataDeletionCard(onClearData = { viewModel.clearAllData() })
-
         // About dialog
         if (state.showAbout) {
             AboutDialog(onDismiss = { viewModel.hideAbout() })
         }
-
-        // Data deletion confirmation
-        if (state.dataClearSuccess) {
-            AlertDialog(
-                onDismissRequest = { viewModel.dismissDataClearSuccess() },
-                confirmButton = {
-                    TextButton(onClick = { viewModel.dismissDataClearSuccess() }) { Text("OK") }
-                },
-                title = { Text("Data Deleted") },
-                text = { Text("All locally stored battery data has been successfully deleted.") }
-            )
-        }
-    }
-}
-
-/**
- * Shows a single destructive action: delete all locally stored data.
- * Requires a confirmation AlertDialog to prevent accidental taps.
- * Previously this card had a "Privacy (GDPR)" title and description block; those were
- * removed in v1.1.4 and replaced by a one-line local-storage notice in the About dialog.
- */
-@Composable
-private fun DataDeletionCard(onClearData: () -> Unit) {
-    var showConfirm by remember { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "Alle Daten werden ausschließlich lokal auf diesem Gerät gespeichert.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Button(
-                onClick = { showConfirm = true },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Delete All Data (Art. 17 GDPR)")
-            }
-        }
-    }
-
-    if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { showConfirm = false },
-            title = { Text("Delete All Data?") },
-            text = {
-                Text(
-                    "This will permanently delete all locally stored battery samples, charging sessions, " +
-                    "and backup data. App settings will be reset."
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showConfirm = false; onClearData() },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Cancel") }
-            }
-        )
     }
 }
 
